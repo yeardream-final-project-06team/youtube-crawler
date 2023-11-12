@@ -26,16 +26,18 @@ deb-src [arch=$(eval ${ARCHITECTURE}) signed-by=/usr/share/keyrings/tor-archive-
     apt-get install -y tor deb.torproject.org-keyring curl git &&\
     wget https://github.com/mozilla/geckodriver/releases/latest/download/geckodriver-$(eval ${LATESTVERSION})-$(eval ${RELEASEARCH}).tar.gz && \
     tar xvf geckodriver-$(eval ${LATESTVERSION})-$(eval ${RELEASEARCH}).tar.gz && \
-    mv geckodriver /usr/bin/
+    mv geckodriver /usr/bin/ &&\
+    rm geckodriver-$(eval ${LATESTVERSION})-$(eval ${RELEASEARCH}).tar.gz
 
 RUN wget https://download-installer.cdn.mozilla.net/pub/firefox/releases/119.0.1/linux-x86_64/ko/firefox-119.0.1.tar.bz2 &&\
     tar xjf firefox-119.0.1.tar.bz2 &&\
     mv firefox /opt &&\
-    ln -s /opt/firefox/firefox /usr/local/bin/firefox
+    ln -s /opt/firefox/firefox /usr/local/bin/firefox &&\
+    rm firefox-119.0.1.tar.bz2
 
 RUN git clone https://github.com/yeardream-final-project-06team/youtube-crawler.git &&\
     cd /youtube-crawler &&\
     pip3 install -r requirements.txt &&\
-    pip3 install ./
+    pip3 install -e ./
 
 RUN echo "service tor start" >> /root/.bashrc
