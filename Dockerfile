@@ -12,7 +12,7 @@ RUN apt-get update && \
 
 ARG ARCHITECTURE="dpkg --print-architecture" \
     RELEASEARCH='if [ "$(eval ${ARCHITECTURE})"=="amd64" ]; then echo "linux64"; else echo "linux32"; fi' \
-    LATESTVERSION='curl -s https://api.github.com/repos/mozilla/geckodriver/releases/latest | grep "tag_name" | cut -d \" -f 4' \
+    LATESTVERSION='curl -s https://api.github.com/repos/mozilla/geckodriver/releases/latest | grep tag_name | cut -d \" -f 4' \
     DISTRIBUTION="lsb_release -cs"
 
 # install Tor
@@ -23,8 +23,8 @@ deb     [arch=$(eval ${ARCHITECTURE}) signed-by=/usr/share/keyrings/tor-archive-
 deb-src [arch=$(eval ${ARCHITECTURE}) signed-by=/usr/share/keyrings/tor-archive-keyring.gpg] https://deb.torproject.org/torproject.org focal main" > /etc/apt/sources.list.d/tor.list &&\
     wget -qO- https://deb.torproject.org/torproject.org/A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89.asc | gpg --dearmor | tee /usr/share/keyrings/tor-archive-keyring.gpg >/dev/null && \
     apt-get update && \
-    apt-get install -y tor deb.torproject.org-keyring &&\
-    wget '"https://github.com/mozilla/geckodriver/releases/latest/download/geckodriver-"$(eval ${LATESTVERSION})-$(eval ${RELEASEARCH}).tar.gz' && \
+    apt-get install -y tor deb.torproject.org-keyring curl git &&\
+    wget https://github.com/mozilla/geckodriver/releases/latest/download/geckodriver-$(eval ${LATESTVERSION})-$(eval ${RELEASEARCH}).tar.gz && \
     tar xvf geckodriver-$(eval ${LATESTVERSION})-$(eval ${RELEASEARCH}).tar.gz && \
     mv geckodriver /usr/bin/
 
@@ -33,10 +33,9 @@ RUN wget https://download-installer.cdn.mozilla.net/pub/firefox/releases/119.0.1
     mv firefox /opt &&\
     ln -s /opt/firefox/firefox /usr/local/bin/firefox
 
-COPY . /crawler
-
-RUN cd /crawler &&\
+RUN git clone https://github.com/yeardream-final-project-06team/youtube-crawler.git &&\
+    cd /youtube-crawler &&\
     pip3 install -r requirements.txt &&\
-    pip3 install -e ./
+    pip3 install ./
 
 RUN echo "service tor start" >> /root/.bashrc
