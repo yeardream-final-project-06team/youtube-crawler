@@ -18,14 +18,28 @@ class TestCollector(TestCase):
         browser.set_window_size(1920,3000)
         collector = Collector(browser)
         data = collector.collect_list_main(debug=True)
+        browser.close()
         for d in data:
             print(d)
 
-
+    
     def test_collect_search(self):
         browser = Firefox(options=self.options)
         browser.set_window_size(1920,3000)
         collector = Collector(browser)
         data = collector.collect_list_search('뉴스', debug=True)
+        browser.close()
         for d in data:
+            print(d)
+
+
+    def test_collect_player(self):
+        browser = Firefox(options=self.options)
+        browser.set_window_size(1920,3000)
+        collector = Collector(browser)
+        video_data, list_data = collector.collect_player_page('https://www.youtube.com/watch?v=we4_EVJrhBU', debug=True)
+        browser.close()
+
+        print(video_data)
+        for d in list_data:
             print(d)
