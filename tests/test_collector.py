@@ -1,5 +1,5 @@
 from unittest import TestCase
-from youtube_crawler.video_list import Collector
+from youtube_crawler.collector import Collector
 from selenium.webdriver import Firefox, FirefoxOptions, FirefoxProfile
 
 

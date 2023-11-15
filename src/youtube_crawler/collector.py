@@ -1,6 +1,5 @@
 from dataclasses import dataclass
-from datetime import date, time, datetime
-from enum import Enum, auto
+from datetime import datetime
 from typing import Optional
 
 from msgspec import Struct
@@ -10,13 +9,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException
-
-
-
-class PAGE(Enum):
-    MAIN = auto()
-    SEARCH = auto()
-    PLAYER = auto()
 
 
 class VideoDetail(Struct):
@@ -31,6 +23,7 @@ class VideoDetail(Struct):
     play_time:str
     category:str
     id:str
+    next_video_url:str
 
 
 class VideoSimple(Struct):
@@ -42,27 +35,11 @@ class VideoSimple(Struct):
     view_count:int
 
 
-class VideoList(Struct):
-    page:PAGE
-
-    # def collect(self):
-
-    #     match self.page:
-    #         case PAGE.MAIN:
-
-
 @dataclass
 class Collector:
     browser:Firefox
 
-    def collect_list_main(self, debug=False):
-        self.browser.get('https://www.youtube.com/')
-        while not (main:=WebDriverWait(self.browser, 60).until(EC.presence_of_all_elements_located((By.ID, 'time-status'))))[:60][-1].text:
-            pass
-
-        if debug:
-            self.browser.save_screenshot('screenshot_main.png')
-
+    def collect_list_main(self) -> list[VideoSimple]:
         contents = self.browser.find_element(By.ID, 'contents')
         rows = contents.find_elements(By.TAG_NAME, 'ytd-rich-grid-row')
 
@@ -102,22 +79,7 @@ class Collector:
         return data
                 
 
-    def collect_list_search(self, keyword:str, debug=False):
-        self.browser.get(f'https://www.youtube.com/results?search_query={keyword}')
-
-        if debug:
-            self.browser.save_screenshot('screenshot_search_0.png')
-
-        y = 0
-        while not (main:=WebDriverWait(self.browser, 60).until(EC.presence_of_all_elements_located((By.ID, 'time-status'))))[:60][-1].text:
-            if y<5000:
-                y += 500
-            self.browser.execute_script(f'window.scrollTo(0,{y})')
-            pass
-
-        if debug:
-            self.browser.save_screenshot('screenshot_search_1.png')
-
+    def collect_list_search(self) -> list[VideoSimple]:
         contents = self.browser.find_element(By.ID, 'contents')
         sections = contents.find_elements(By.TAG_NAME, 'ytd-item-section-renderer')
 
@@ -156,31 +118,14 @@ class Collector:
         return data
                 
     
-    def collect_player_page(self, url:str, debug=False):
-        self.browser.get(url)
-
-        if debug:
-            self.browser.save_screenshot('screenshot_player_0.png')
-
-        y = 0
-        while not (main:=WebDriverWait(self.browser, 60).until(EC.presence_of_all_elements_located((By.ID, 'time-status'))))[:20][-1].text \
-            or len(main)<20:
-            if y<2000:
-                y += 500
-            self.browser.execute_script(f'window.scrollTo(0,{y})')
-            pass
-
-        if debug:
-            self.browser.save_screenshot('screenshot_player_1.png')
-
-        # list_data = self.collect_list_player()
-        list_data = []
+    def collect_player_page(self) -> tuple[VideoDetail, list[VideoSimple]]:
+        list_data = self.collect_list_player()
         video_data = self.collect_video_detail()
 
         return video_data, list_data
 
 
-    def collect_list_player(self):
+    def collect_list_player(self) -> list[VideoSimple]:
 
         contents = self.browser.find_element(By.ID, 'related').find_element(By.ID, 'items')
         videos = contents.find_elements(By.TAG_NAME, 'ytd-compact-video-renderer')
@@ -217,7 +162,7 @@ class Collector:
         return data
 
 
-    def collect_video_detail(self):
+    def collect_video_detail(self) -> VideoDetail:
         content = self.browser.find_element(By.ID, 'watch7-content')
         url = content.find_element(By.CSS_SELECTOR, '#watch7-content > link:nth-child(1)').get_attribute('href')
         title = content.find_element(By.CSS_SELECTOR, '#watch7-content > meta:nth-child(2)').get_attribute('content')
@@ -244,8 +189,11 @@ class Collector:
 
         tags = self.browser.find_elements(By.CSS_SELECTOR, '#info > a')
         tags = [t.text for t in tags]
+
+        next_video_url = self.browser.find_element(By.CSS_SELECTOR, '#movie_player > div.ytp-chrome-bottom > div.ytp-chrome-controls > div.ytp-left-controls > a.ytp-next-button.ytp-button').get_attribute('href')
         
-        return VideoDetail(title, author, view_count, url, like, description, tags, upload_date, play_time, category, video_id)
+        return VideoDetail(title, author, view_count, url, like, description, tags, upload_date, play_time, category, video_id, next_video_url)
+
 
     def get_view_count(self, aria:str, title:str, author:str):
         prefix = f'{title} 게시자: {author} 조회수 '
