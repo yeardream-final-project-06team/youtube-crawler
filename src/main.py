@@ -1,36 +1,31 @@
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from PIL import Image
+import os
+import sys
 
+from selenium.webdriver import Firefox, FirefoxOptions, FirefoxProfile, Chrome
 
-profile = webdriver.FirefoxProfile()
-# profile.set_preference('network.proxy.type',1)
-# profile.set_preference('network.proxy.socks','127.0.0.1')
-# profile.set_preference('network.proxy.socks_port',9050)
+from youtube_crawler.persona import Persona
 
-options = webdriver.FirefoxOptions()
-options.add_argument("--headless")
-options._profile = profile
+mode = os.getenv("MODE", "dev")
 
-browser = webdriver.Firefox(options=options)
+if __name__ == "__main__":
+    if mode == "prod":
+        profile = FirefoxProfile()
+        profile.set_preference("permissions.default.image", 2)
+        profile.set_preference("intl.accept_languages", "ko-kr,en-us,en")
 
-browser.set_window_size(1920, 2500)
-browser.get("https://www.youtube.com/")
-browser.save_screenshot("/crawler/screenshot.png")
+        options = FirefoxOptions()
+        options.add_argument("--headless")
+        options._profile = profile
 
-# browser.get("https://www.youtube.com/results?search_query=메모법")
+        browser = Firefox(options=options)
+    else:
+        browser = Chrome()
 
-# titles = browser.find_elements(By.CSS_SELECTOR, "#text")
-
-titles = browser.find_element(By.ID, "contents")
-titles = titles.find_elements(By.ID, "time-status")
-for t in titles:
-    print(t.find_element(By.ID, "text").text)
-    # label = t.get_attribute('aria-label')
-    # title = t.get_attribute('title')
-    # link = t.get_attribute('href')
-    # print(label)
-    # print(title)
-    # print(link)
-
-browser.close()
+    name = sys.argv[1]
+    keywords = sys.argv[2].split()
+    persona = Persona(
+        name,
+        keywords,
+        browser,
+    )
+    persona.run()
