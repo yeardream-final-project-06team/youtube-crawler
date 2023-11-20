@@ -1,6 +1,6 @@
 from datetime import datetime
-from urllib.parse import urlparse
 from enum import Enum
+import unicodedata
 
 import msgspec
 from selenium.webdriver import Firefox, Chrome
@@ -10,7 +10,8 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.remote.webdriver import WebDriver
 
 from youtube_crawler.models import VideoSimple, VideoDetail
-from youtube_crawler.logger import logger
+from youtube_crawler.logger import logger, check_parsing_error
+from youtube_crawler.utils import get_video_path, get_video_id
 
 
 class Screen(Enum):
@@ -21,8 +22,9 @@ class Screen(Enum):
 
 
 class Collector:
-    def __init__(self, browser: Firefox | Chrome) -> None:
+    def __init__(self, browser: Firefox | Chrome, nums_per_page=20) -> None:
         self.browser = browser
+        self.nums_per_page = nums_per_page
 
     def collect_list_main(self) -> list[VideoSimple]:
         contents = self.browser.find_element(By.ID, "contents")
@@ -35,7 +37,7 @@ class Collector:
                 video_simple = self.get_video_simple(v, Screen.MAIN)
                 if video_simple:
                     data.append(video_simple)
-                if len(data) == 20:
+                if len(data) == self.nums_per_page:
                     return data
         return data
 
@@ -52,7 +54,7 @@ class Collector:
                 video_simple = self.get_video_simple(v, Screen.SEARCH)
                 if video_simple:
                     data.append(video_simple)
-                if len(data) == 20:
+                if len(data) == self.nums_per_page:
                     return data
         return data
 
@@ -70,7 +72,7 @@ class Collector:
             video_simple = self.get_video_simple(v, Screen.PLAYER)
             if video_simple:
                 data.append(video_simple)
-            if len(data) == 20:
+            if len(data) == self.nums_per_page:
                 return data
         return data
 
@@ -87,16 +89,11 @@ class Collector:
                 video_simple = self.get_video_simple(v, Screen.CHANNEL)
                 if video_simple:
                     data.append(video_simple)
-                if len(data) == 20:
+                if len(data) == self.nums_per_page:
                     return data
         return data
 
-    def collect_player_page(self) -> tuple[VideoDetail, list[VideoSimple]]:
-        list_data = self.collect_list_player()
-        video_data = self.get_video_detail()
-
-        return video_data, list_data
-
+    @check_parsing_error
     def get_video_detail(self) -> VideoDetail:
         content = self.browser.find_element(By.ID, "watch7-content")
 
@@ -185,13 +182,9 @@ class Collector:
             video_id,
             next_video_url,
         )
-        for attr in detail.__struct_fields__:
-            if not getattr(detail, attr):
-                logger.warn("attribution not found")
-                logger.warn(msgspec.json.encode(detail))
-                break
         return detail
 
+    @check_parsing_error
     def get_video_simple(
         self,
         v: WebElement,
@@ -277,8 +270,8 @@ class Collector:
             return None
 
         # shorts는 수집제외
-        if str(urlparse(url).path).startswith("/shorts"):
-            return None
+        if get_video_path(url).startswith("/shorts"):
+            return False
 
         aria = elem.get_attribute("aria-label")
         title = elem.get_attribute("title")
@@ -290,18 +283,21 @@ class Collector:
             author = " ".join(words)
 
         view_count = self.get_view_count(aria, title, author)
-        id = str(urlparse(url).query)[2:]
-
+        id = get_video_id(url)
         simple = VideoSimple(id, title, author, url, play_time, view_count)
-        for attr in simple.__struct_fields__:
-            if not getattr(simple, attr):
-                logger.warn("attribution not found")
-                logger.warn(msgspec.json.encode(simple))
-                break
         return simple
+
+    def collect_ad(self):
+        skip_button = self.browser.find_element(
+            By.XPATH,
+            "/html/body/ytd-app/div[1]/ytd-page-manager/ytd-watch-flexy/div[5]/div[1]/div/div[1]/div[2]/div/div/ytd-player/div/div/div[6]/div/div[3]/div/div[2]/span/button",
+        )
+        pass
 
     def get_view_count(self, aria: str, title: str, author: str) -> int:
         prefix = f"{title} 게시자: {author} 조회수 "
+        prefix = unicodedata.normalize("NFC", prefix)
+        aria = unicodedata.normalize("NFC", aria)
 
         view_count = aria.removeprefix(prefix)
         view_count_end = view_count.find("회")
