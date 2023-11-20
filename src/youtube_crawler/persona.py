@@ -1,5 +1,6 @@
 from random import choice, random
 from time import sleep
+from datetime import datetime
 
 from msgspec import msgpack
 from selenium.webdriver import Firefox, Chrome
@@ -10,6 +11,9 @@ from selenium.webdriver.common.by import By
 from youtube_crawler.models import VideoSimple, VideoDetail
 from youtube_crawler.collector import Collector
 from youtube_crawler.logger import logger, call_logger
+from youtube_crawler.utils import cvt_play_time
+
+# from youtube_crawler.sender import Sender
 
 
 class Persona:
@@ -19,15 +23,18 @@ class Persona:
         keywords: list[str],
         browser: Firefox | Chrome,
         watch_count=10,
+        nums_per_page=20,
         speed=1,
     ):
         self.name = name
         self.keywords = keywords
         self.watch_count = watch_count
+        self.nums_per_page = nums_per_page
         self.speed = speed
         self.browser = browser
         self.browser.set_window_size(1920, 3000)
-        self.collector = Collector(self.browser)
+        self.collector = Collector(self.browser, nums_per_page)
+        # self.sender = Sender()
 
         self.last_video = None
         self.related = True
@@ -79,6 +86,7 @@ class Persona:
 
         # 수집된 데이터 전송
         # TODO
+        # self.sender.send_many(index, self.video_list)
 
     def move_to_main(self) -> None:
         self.browser.get("https://www.youtube.com/?gl=KR")
@@ -92,6 +100,7 @@ class Persona:
 
         # 수집된 데이터 전송
         # TODO
+        # self.sender.send_many(index, self.video_list)
 
     def move_to_channel(self) -> None:
         self.browser.get(self.last_video.channel)
@@ -112,57 +121,53 @@ class Persona:
     def watch_recommendation(self) -> None:
         self.next_urls = [video.url for video in self.video_list]
 
-    def watch_video(self):
+    def watch_video(self) -> None:
         self.browser.get(choice(self.next_urls))
 
         # 추천 영상이 로드될때까지 대기
         self.wait_loading()
 
         # 광고 영상 존재시 광고 수집
+        ad = self.collector.collect_ad()
         # TODO
+        if ad:
+            pass
+            # self.sender.send_one(index, ad)
 
-        # 데이터 수집
-        self.last_video, self.video_list = self.collector.collect_player_page()
+        # 영상 시청 화면에서 데이터 수집
+        self.video_list = self.collector.collect_list_player()
+        self.last_video = self.collector.get_video_detail()
+        self.next_urls = [video.url for video in self.video_list]
 
         # 수집된 데이터 전송
         # TODO
+        # self.sender.send_many(index, self.video_list)
 
         # 영상시청
-        play_time = self.cvt_play_time(self.last_video.play_time)
+        play_time = cvt_play_time(self.last_video.play_time)
         watching_time = (1 + random() * 9) * 60
         watching_time *= 2 if self.related else 0.8
-        watching_time = min(watching_time, play_time) + 30
-        sleep(watching_time / self.speed)
+        watching_time = (min(watching_time, play_time) + 10) / self.speed
+        start = datetime.now()
+        while (datetime.now() - start).total_seconds() < watching_time:
+            # 광고 영상 존재시 광고 수집
+            ad = self.collector.collect_ad()
+            # TODO
+            if ad:
+                pass
+                # self.sender.send_one(index, ad)
+            sleep(1)
 
-    def wait_loading(self, num_components=20, seconds=30) -> None:
+    def wait_loading(self, seconds=30) -> None:
         y = 0
+        num_components = int(self.nums_per_page * 1.5)
         while not (
             WebDriverWait(self.browser, seconds).until(
                 EC.presence_of_all_elements_located((By.ID, "time-status"))
             )
         )[:num_components][-1].text:
-            if y < 2000:
-                y += 500
+            y += 500
             self.browser.execute_script(f"window.scrollTo(0,{y})")
-            sleep(1)
-
-    @staticmethod
-    def cvt_play_time(play_time: str) -> int:
-        if play_time == "live":
-            return int(random() * 10 * 60)
-        _play_time = play_time.split(":")
-        match len(_play_time):
-            case 1:
-                seconds = int(_play_time[0])
-            case 2:
-                seconds = int(_play_time[0]) * 60 + int(_play_time[1])
-            case 3:
-                seconds = (
-                    int(_play_time[0]) * 3600
-                    + int(_play_time[1]) * 60
-                    + int(_play_time[2])
-                )
-            case _:
-                logger.warn(f"{play_time} not matched")
-                return 0
-        return seconds
+            print("waiting..")
+            print(f"{y}")
+            sleep(random())

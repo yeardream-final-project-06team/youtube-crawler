@@ -1,6 +1,7 @@
 import os
 import sys
 
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver import Firefox, FirefoxOptions, FirefoxProfile, Chrome
 
 from youtube_crawler.persona import Persona
@@ -19,7 +20,8 @@ if __name__ == "__main__":
 
         browser = Firefox(options=options)
     else:
-        browser = Chrome()
+        service = Service(executable_path="./chromedriver")
+        browser = Chrome(service=service)
 
     name = sys.argv[1]
     keywords = sys.argv[2].split()
