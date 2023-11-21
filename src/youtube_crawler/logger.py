@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 import functools
 import traceback
@@ -22,7 +23,7 @@ def call_logger(func):
         except Exception as e:
             logger.fatal(e)
             logger.fatal(traceback.format_exc())
-            exit()
+            sys.exit()
 
     return wrapper
 
@@ -31,10 +32,17 @@ def check_parsing_error(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         result = func(*args, **kwargs)
-        if result == False:
+        if not result:
             return result
         for attr in result.__struct_fields__:
-            if not getattr(result, attr) and attr != "tags":
+            if not getattr(result, attr):
+                if attr in [
+                    "tags",
+                    "likes",
+                    "view_count",
+                    "desc",
+                ]:
+                    continue
                 logger.error(f"attribution for {attr} not found")
                 logger.error(msgspec.json.encode(result))
                 break
