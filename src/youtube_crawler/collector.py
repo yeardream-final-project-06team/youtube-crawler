@@ -1,15 +1,18 @@
 from datetime import datetime
 from enum import Enum
+from time import sleep
+from random import random
 import unicodedata
+import subprocess
 
-import msgspec
 from selenium.webdriver import Firefox, Chrome
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
-from youtube_crawler.models import VideoSimple, VideoDetail
+from youtube_crawler.models import VideoSimple, VideoDetail, VideoAd
 from youtube_crawler.logger import logger, check_parsing_error
 from youtube_crawler.utils import get_video_path, get_video_id
 
@@ -25,6 +28,9 @@ class Collector:
     def __init__(self, browser: Firefox | Chrome, nums_per_page=20) -> None:
         self.browser = browser
         self.nums_per_page = nums_per_page
+        self.container_id = subprocess.run(
+            ["hostname"], capture_output=True, text=True
+        ).stdout.strip()
 
     def collect_list_main(self) -> list[VideoSimple]:
         contents = self.browser.find_element(By.ID, "contents")
@@ -94,38 +100,36 @@ class Collector:
         return data
 
     @check_parsing_error
-    def get_video_detail(self) -> VideoDetail:
+    def get_video_detail(self, video: VideoSimple) -> VideoDetail:
+        id = video.id
+        title = video.title
+        author = video.author
+        url = video.url
+        play_time = video.play_time
+        view_count = video.view_count
+
+        self.browser.execute_script("window.scrollTo(0,0)")
+
+        description = self.browser.find_element(By.ID, "description-inner")
+        description.click()
+        description = description.find_element(
+            By.CSS_SELECTOR,
+            "#description-inline-expander > yt-attributed-string",
+        ).text
+
+        like = self.browser.find_element(
+            By.CSS_SELECTOR,
+            "#segmented-like-button > ytd-toggle-button-renderer > yt-button-shape > button",
+        ).get_attribute("aria-label")
+
+        tags = self.browser.find_elements(By.CSS_SELECTOR, "#info > a")
+        tags = [t.text for t in tags]
+
         content = self.browser.find_element(By.ID, "watch7-content")
-
-        url = content.find_element(
-            By.CSS_SELECTOR,
-            "#watch7-content > link:nth-child(1)",
-        ).get_attribute("href")
-
-        title = content.find_element(
-            By.CSS_SELECTOR,
-            "#watch7-content > meta:nth-child(2)",
-        ).get_attribute("content")
-
-        video_id = content.find_element(
-            By.CSS_SELECTOR,
-            "#watch7-content > meta:nth-child(5)",
-        ).get_attribute("content")
-
-        author = content.find_element(
-            By.CSS_SELECTOR,
-            "#watch7-content > span:nth-child(7) > link:nth-child(2)",
-        ).get_attribute("content")
-
         channel = content.find_element(
             By.CSS_SELECTOR,
             "#watch7-content > span:nth-child(7) > link:nth-child(1)",
         ).get_attribute("href")
-
-        view_count = content.find_element(
-            By.CSS_SELECTOR,
-            "#watch7-content > meta:nth-child(17)",
-        ).get_attribute("content")
 
         upload_date = content.find_element(
             By.CSS_SELECTOR,
@@ -137,50 +141,28 @@ class Collector:
             "#watch7-content > meta:nth-child(20)",
         ).get_attribute("content")
 
-        self.browser.execute_script("window.scrollTo(0,0)")
-        # self.browser.save_screenshot("screenshot_description.png")
-        description = self.browser.find_element(By.ID, "description-inner")
-        description.click()
-        description = description.find_element(
-            By.CSS_SELECTOR,
-            "#description-inline-expander > yt-attributed-string",
-        ).text
-
-        play_time = self.get_play_time(
-            self.browser,
-            By.CSS_SELECTOR,
-            "#movie_player > div.ytp-chrome-bottom > div.ytp-chrome-controls > div.ytp-left-controls > div.ytp-time-display.notranslate > span:nth-child(2) > span.ytp-time-duration",
-            By.CSS_SELECTOR,
-            "#movie_player > div.ytp-chrome-bottom > div.ytp-chrome-controls > div.ytp-left-controls > div.ytp-time-display.notranslate.ytp-live > button",
-        )
-
-        like = self.browser.find_element(
-            By.CSS_SELECTOR,
-            "#segmented-like-button > ytd-toggle-button-renderer > yt-button-shape > button",
-        ).get_attribute("aria-label")
-
-        tags = self.browser.find_elements(By.CSS_SELECTOR, "#info > a")
-        tags = [t.text for t in tags]
-
         next_video_url = self.browser.find_element(
             By.CSS_SELECTOR,
             "#movie_player > div.ytp-chrome-bottom > div.ytp-chrome-controls > div.ytp-left-controls > a.ytp-next-button.ytp-button",
         ).get_attribute("href")
 
+        self.browser.execute_script("window.scrollTo(0,0)")
+
         detail = VideoDetail(
+            id,
             title,
             author,
-            channel,
-            int(view_count) if view_count else 0,
             url,
-            self.get_like_count(like) if like else 0,
+            play_time,
+            view_count,
             description,
+            channel,
+            self.get_like_count(like) if like else 0,
             tags,
             datetime.fromisoformat(upload_date) if upload_date else None,
-            play_time,
             category,
-            video_id,
             next_video_url,
+            self.container_id,
         )
         return detail
 
@@ -189,7 +171,7 @@ class Collector:
         self,
         v: WebElement,
         screen: Screen,
-    ) -> VideoSimple | None:
+    ) -> VideoSimple | bool | None:
         url = ""
         if screen == Screen.MAIN:
             elem = v.find_element(By.ID, "video-title-link")
@@ -203,9 +185,6 @@ class Collector:
 
             play_time = self.get_play_time(
                 v,
-                By.ID,
-                "time-status",
-                By.CSS_SELECTOR,
                 "#meta > ytd-badge-supported-renderer.video-badge.style-scope.ytd-rich-grid-media > div > p",
             )
 
@@ -223,9 +202,6 @@ class Collector:
 
             play_time = self.get_play_time(
                 v,
-                By.ID,
-                "time-status",
-                By.CSS_SELECTOR,
                 "#badges > div.badge.badge-style-type-live-now-alternate.style-scope.ytd-badge-supported-renderer.style-scope.ytd-badge-supported-renderer > p",
             )
 
@@ -245,9 +221,6 @@ class Collector:
 
             play_time = self.get_play_time(
                 v,
-                By.ID,
-                "time-status",
-                By.CSS_SELECTOR,
                 "#dismissible > div > div.metadata.style-scope.ytd-compact-video-renderer > a > div > ytd-badge-supported-renderer > div > p",
             )
 
@@ -260,39 +233,85 @@ class Collector:
 
             play_time = self.get_play_time(
                 v,
-                By.ID,
-                "time-status",
-                By.CSS_SELECTOR,
                 "#badges > div.badge.badge-style-type-live-now-alternate.style-scope.ytd-badge-supported-renderer.style-scope.ytd-badge-supported-renderer > p",
             )
 
         else:
             return None
 
+        if not play_time:
+            return None
         # shorts는 수집제외
-        if get_video_path(url).startswith("/shorts"):
-            return False
+        if url and get_video_path(url).startswith("/shorts"):
+            return None
 
         aria = elem.get_attribute("aria-label")
         title = elem.get_attribute("title")
 
-        if not author:
+        if not author and aria:
             words = aria.removeprefix(f"{title} 게시자:").split()
-            while words.pop() != "조회수":
+            while words and words.pop() != "조회수":
                 continue
             author = " ".join(words)
 
         view_count = self.get_view_count(aria, title, author)
         id = get_video_id(url)
-        simple = VideoSimple(id, title, author, url, play_time, view_count)
+        simple = VideoSimple(
+            id,
+            title,
+            author,
+            url,
+            play_time,
+            view_count,
+            self.container_id,
+        )
         return simple
 
     def collect_ad(self):
-        skip_button = self.browser.find_element(
-            By.XPATH,
-            "/html/body/ytd-app/div[1]/ytd-page-manager/ytd-watch-flexy/div[5]/div[1]/div/div[1]/div[2]/div/div/ytd-player/div/div/div[6]/div/div[3]/div/div[2]/span/button",
-        )
-        pass
+        try:
+            headline = self.browser.find_element(
+                By.CLASS_NAME,
+                "ytp-flyout-cta-headline",
+            ).text
+
+            description = self.browser.find_element(
+                By.CLASS_NAME,
+                "ytp-flyout-cta-description",
+            ).text
+
+            icon = self.browser.find_element(
+                By.CLASS_NAME,
+                "ytp-flyout-cta-icon",
+            ).get_attribute("src")
+
+            preview = self.browser.find_element(
+                By.CLASS_NAME,
+                "ytp-ad-preview-container",
+            ).text
+
+            # skip 가능
+            if preview.isnumeric():
+                skip = WebDriverWait(self.browser, 10).until(
+                    EC.element_to_be_clickable(
+                        (By.CLASS_NAME, "ytp-ad-skip-button-modern")
+                    )
+                )
+                sleep(random() * 2)
+                skip.click()
+            else:
+                WebDriverWait(self.browser, 60).until(
+                    EC.invisibility_of_element_located(
+                        (By.CLASS_NAME, "ytp-ad-preview-container")
+                    )
+                )
+            return VideoAd(
+                headline,
+                description,
+                icon,
+                self.container_id,
+            )
+        except NoSuchElementException:
+            return None
 
     def get_view_count(self, aria: str, title: str, author: str) -> int:
         prefix = f"{title} 게시자: {author} 조회수 "
@@ -317,20 +336,17 @@ class Collector:
 
     def get_play_time(
         self,
-        v: WebElement | WebDriver,
-        time_by: str,
-        time_selector: str,
-        live_by: str,
-        live_selector: str,
+        v: WebElement,
+        selector: str,
     ) -> str:
         try:
-            play_time = v.find_element(time_by, time_selector).text
+            play_time = v.find_element(By.ID, "time-status").text
         except NoSuchElementException as e:
             try:
                 if (
                     text := v.find_element(
-                        live_by,
-                        live_selector,
+                        By.CSS_SELECTOR,
+                        selector,
                     ).text
                 ) == "실시간":
                     play_time = "live"
