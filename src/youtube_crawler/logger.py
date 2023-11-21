@@ -48,7 +48,7 @@ def check_parsing_error(func):
                     "tags",
                     "likes",
                     "view_count",
-                    "desc",
+                    "description",
                 ]:
                     continue
                 logger.error(f"attribution for {attr} not found")

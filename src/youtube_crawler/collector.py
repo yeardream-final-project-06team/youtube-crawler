@@ -183,11 +183,6 @@ class Collector:
                 "avatar-link",
             ).get_attribute("title")
 
-            play_time = self.get_play_time(
-                v,
-                "#meta > ytd-badge-supported-renderer.video-badge.style-scope.ytd-rich-grid-media > div > p",
-            )
-
         elif screen == Screen.SEARCH:
             elem = v.find_element(By.ID, "video-title")
 
@@ -198,11 +193,6 @@ class Collector:
                 .find_element(By.ID, "channel-name")
                 .find_element(By.CSS_SELECTOR, "#text > a")
                 .get_attribute("textContent")
-            )
-
-            play_time = self.get_play_time(
-                v,
-                "#badges > div.badge.badge-style-type-live-now-alternate.style-scope.ytd-badge-supported-renderer.style-scope.ytd-badge-supported-renderer > p",
             )
 
         elif screen == Screen.PLAYER:
@@ -219,11 +209,6 @@ class Collector:
                 .get_attribute("textContent")
             )
 
-            play_time = self.get_play_time(
-                v,
-                "#dismissible > div > div.metadata.style-scope.ytd-compact-video-renderer > a > div > ytd-badge-supported-renderer > div > p",
-            )
-
         elif screen == Screen.CHANNEL:
             elem = v.find_element(By.ID, "video-title")
 
@@ -231,19 +216,15 @@ class Collector:
 
             author = None
 
-            play_time = self.get_play_time(
-                v,
-                "#badges > div.badge.badge-style-type-live-now-alternate.style-scope.ytd-badge-supported-renderer.style-scope.ytd-badge-supported-renderer > p",
-            )
-
         else:
             return None
 
-        if not play_time:
-            return None
         # shorts는 수집제외
         if url and get_video_path(url).startswith("/shorts"):
             return None
+
+        play_time = v.find_element(By.ID, "time-status").text
+        play_time = play_time if ":" in play_time else "live"
 
         aria = elem.get_attribute("aria-label")
         title = elem.get_attribute("title")
@@ -254,7 +235,7 @@ class Collector:
                 continue
             author = " ".join(words)
 
-        view_count = self.get_view_count(aria)
+        view_count = self.get_view_count(aria, title, author)
         id = get_video_id(url)
         simple = VideoSimple(
             id,
@@ -313,16 +294,26 @@ class Collector:
         except NoSuchElementException:
             return None
 
-    def get_view_count(self, aria: str) -> int:
+    def get_view_count(self, aria: str, title: str, author: str) -> int:
         aria = unicodedata.normalize("NFC", aria)
-        words = aria.split()
-        try:
-            while words:
-                if (view_count := words.pop()) == "회":
-                    return int(view_count[:-1].replace(",", ""))
-        except Exception:
-            return 0
-        return 0
+        view_count = (
+            aria.removeprefix(title)
+            .lstrip()
+            .removeprefix("게시자:")
+            .lstrip()
+            .removeprefix(author)
+            .lstrip()
+            .removeprefix("조회수")
+            .lstrip()
+        )
+
+        view_count_end = view_count.find("회")
+        if "없음" in view_count:
+            view_count = 0
+        else:
+            view_count = int(view_count[:view_count_end].replace(",", ""))
+
+        return view_count
 
     def get_like_count(self, like: str) -> int:
         like = unicodedata.normalize("NFC", like)
@@ -331,26 +322,3 @@ class Collector:
             .removesuffix("명이 이 동영상을 좋아함")
             .replace(",", "")
         )
-
-    def get_play_time(
-        self,
-        v: WebElement,
-        selector: str,
-    ) -> str:
-        try:
-            play_time = v.find_element(By.ID, "time-status").text
-        except NoSuchElementException as e:
-            try:
-                if (
-                    text := v.find_element(
-                        By.CSS_SELECTOR,
-                        selector,
-                    ).text
-                ) == "실시간":
-                    play_time = "live"
-                else:
-                    logger.fatal(f"play_time: {text}")
-                    raise e
-            except NoSuchElementException as e:
-                raise e
-        return play_time
