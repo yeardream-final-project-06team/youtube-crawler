@@ -254,7 +254,7 @@ class Collector:
                 continue
             author = " ".join(words)
 
-        view_count = self.get_view_count(aria, title, author)
+        view_count = self.get_view_count(aria)
         id = get_video_id(url)
         simple = VideoSimple(
             id,
@@ -313,21 +313,19 @@ class Collector:
         except NoSuchElementException:
             return None
 
-    def get_view_count(self, aria: str, title: str, author: str) -> int:
-        prefix = f"{title} 게시자: {author} 조회수 "
-        prefix = unicodedata.normalize("NFC", prefix)
+    def get_view_count(self, aria: str) -> int:
         aria = unicodedata.normalize("NFC", aria)
-
-        view_count = aria.removeprefix(prefix)
-        view_count_end = view_count.find("회")
-        if "없음" in view_count:
-            view_count = 0
-        else:
-            view_count = int(view_count[:view_count_end].replace(",", ""))
-
-        return view_count
+        words = aria.split()
+        try:
+            while words:
+                if (view_count := words.pop()) == "회":
+                    return int(view_count[:-1].replace(",", ""))
+        except Exception:
+            return 0
+        return 0
 
     def get_like_count(self, like: str) -> int:
+        like = unicodedata.normalize("NFC", like)
         return int(
             like.removeprefix("나 외에 사용자 ")
             .removesuffix("명이 이 동영상을 좋아함")
