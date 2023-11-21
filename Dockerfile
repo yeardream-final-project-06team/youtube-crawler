@@ -35,13 +35,6 @@ RUN wget https://github.com/mozilla/geckodriver/releases/latest/download/geckodr
 
 #install firefox
 RUN apt-get install -y glibc-source libgtk-3-0 libdbus-glib-1-dev libglib2.0-0 libstdc++6 libxtst6 xorg openbox libdbus-1-dev network-manager pulseaudio &&\
-    wget https://download-installer.cdn.mozilla.net/pub/firefox/releases/119.0.1/linux-x86_64/ko/firefox-119.0.1.tar.bz2 &&\
-    tar xjf firefox-119.0.1.tar.bz2 &&\
-    mv firefox /opt &&\
-    ln -s /opt/firefox/firefox /usr/local/bin/firefox &&\
-    rm firefox-119.0.1.tar.bz2
-
-RUN apt-get install -y glibc-source libgtk-3-0 libdbus-glib-1-dev libglib2.0-0 libstdc++6 libxtst6 xorg openbox libdbus-1-dev network-manager pulseaudio &&\
     wget -O firefox.tar.bz2 "https://download.mozilla.org/?product=firefox-latest&os=$(eval ${FIREFOXARCH})&lang=ko" &&\
     tar xjf firefox.tar.bz2 &&\
     mv firefox /opt &&\
