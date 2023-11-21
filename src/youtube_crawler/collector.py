@@ -244,6 +244,8 @@ class Collector:
             words = (
                 aria.removeprefix(title).lstrip().removeprefix("게시자:").lstrip().split()
             )
+            if "조회수" not in words:
+                return None
             while words and words.pop() != "조회수":
                 continue
             author = " ".join(words)
