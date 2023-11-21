@@ -234,6 +234,7 @@ class Collector:
             while words and words.pop() != "조회수":
                 continue
             author = " ".join(words)
+        author = author.strip()
 
         view_count = self.get_view_count(aria, title, author)
         id = get_video_id(url)
