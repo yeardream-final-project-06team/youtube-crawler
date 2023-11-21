@@ -178,10 +178,14 @@ class Collector:
 
             url = elem.get_attribute("href")
 
-            author = v.find_element(
-                By.ID,
-                "avatar-link",
-            ).get_attribute("title")
+            author = (
+                v.find_element(
+                    By.ID,
+                    "avatar-link",
+                )
+                .get_attribute("title")
+                .strip()
+            )
 
         elif screen == Screen.SEARCH:
             elem = v.find_element(By.ID, "video-title")
@@ -193,6 +197,7 @@ class Collector:
                 .find_element(By.ID, "channel-name")
                 .find_element(By.CSS_SELECTOR, "#text > a")
                 .get_attribute("textContent")
+                .strip()
             )
 
         elif screen == Screen.PLAYER:
@@ -207,6 +212,7 @@ class Collector:
                 v.find_element(By.ID, "channel-name")
                 .find_element(By.CSS_SELECTOR, "#text")
                 .get_attribute("textContent")
+                .strip()
             )
 
         elif screen == Screen.CHANNEL:
@@ -226,15 +232,18 @@ class Collector:
         play_time = v.find_element(By.ID, "time-status").text
         play_time = play_time if ":" in play_time else "live"
 
-        aria = elem.get_attribute("aria-label")
-        title = elem.get_attribute("title")
+        aria = elem.get_attribute("aria-label").strip()
+        aria = unicodedata.normalize("NFC", aria)
+        title = elem.get_attribute("title").strip()
+        title = unicodedata.normalize("NFC", title)
 
         if not author and aria:
-            words = aria.removeprefix(f"{title} 게시자:").split()
+            words = (
+                aria.removeprefix(title).lstrip().removeprefix("게시자:").lstrip().split()
+            )
             while words and words.pop() != "조회수":
                 continue
             author = " ".join(words)
-        author = author.strip()
 
         view_count = self.get_view_count(aria, title, author)
         id = get_video_id(url)
@@ -319,7 +328,8 @@ class Collector:
     def get_like_count(self, like: str) -> int:
         like = unicodedata.normalize("NFC", like)
         return int(
-            like.removeprefix("나 외에 사용자 ")
+            like.removeprefix("나 외에 사용자")
             .removesuffix("명이 이 동영상을 좋아함")
+            .strip()
             .replace(",", "")
         )
