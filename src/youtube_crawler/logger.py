@@ -8,16 +8,13 @@ import msgspec
 import requests
 
 logger = logging.getLogger("web-crawler-container")
-discord_webhook = os.getenv("webhook_url")
+discord_webhook = os.getenv("DISCOED_WEBHOOK_URL", "")
 
 if os.getenv("MODE", "dev") == "prod":
     logger.setLevel(logging.INFO)
 else:
     logger.setLevel(logging.DEBUG)
 
-if not discord_webhook:
-    logger.error("'webhook_url' error")
-    sys.exit("'webhook_url' error")
 
 def call_logger(func):
     @functools.wraps(func)
@@ -28,12 +25,12 @@ def call_logger(func):
         except Exception as e:
             logger.fatal(e)
             logger.fatal(traceback.format_exc())
-            
-            error_type = type(e).__name__ # 에러 타입
-            error_msg = str(e) # 에러 메시지
+
+            error_type = type(e).__name__  # 에러 타입
+            error_msg = str(e)  # 에러 메시지
             send_msg = f"ErrorType: {error_type}\nErrorMessage: {error_msg}"
             requests.post(discord_webhook, json={"content": send_msg})
-            
+
             sys.exit()
 
     return wrapper
