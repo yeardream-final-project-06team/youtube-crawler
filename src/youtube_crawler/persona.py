@@ -156,14 +156,18 @@ class Persona:
                 pass
             sleep(1)
 
-    def wait_loading(self, seconds=30) -> None:
+    def wait_loading(self, seconds=10) -> None:
         y = 0
-        num_components = int(self.nums_per_page * 1.5)
-        while not (
-            WebDriverWait(self.browser, seconds).until(
+        now = datetime.now()
+        while True:
+            if (datetime.now() - now).seconds > seconds:
+                break
+            elements = WebDriverWait(self.browser, seconds).until(
                 EC.presence_of_all_elements_located((By.ID, "time-status"))
             )
-        )[:num_components][-1].text:
+            loaded = len([elem for elem in elements if elem.text])
+            if self.nums_per_page < loaded:
+                break
             y += 500
             self.browser.execute_script(f"window.scrollTo(0,{y})")
             sleep(random())
