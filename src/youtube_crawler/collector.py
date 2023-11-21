@@ -229,7 +229,10 @@ class Collector:
         if url and get_video_path(url).startswith("/shorts"):
             return None
 
-        play_time = v.find_element(By.ID, "time-status").text
+        try:
+            play_time = v.find_element(By.ID, "time-status").text
+        except NoSuchElementException:
+            return None
         play_time = play_time if ":" in play_time else "live"
 
         aria = elem.get_attribute("aria-label").strip()
