@@ -149,7 +149,7 @@ def start_container(image_name):
         f"--log-opt syslog-address=tcp://{SYSLOG_HOST}:{SYSLOG_PORT}",
         f"{image_name}",
         "python3 -u /youtube-crawler/src/main.py",
-        f"{name}",
+        f"'{name}'",
         f"{keywords}",
     ]
     for arg in args:
