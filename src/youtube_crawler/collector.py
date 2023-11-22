@@ -3,7 +3,6 @@ from enum import Enum
 from time import sleep
 from random import random
 import unicodedata
-import subprocess
 
 from selenium.webdriver import Firefox, Chrome
 from selenium.webdriver.common.by import By
@@ -13,7 +12,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from youtube_crawler.models import VideoSimple, VideoDetail, VideoAd
-from youtube_crawler.logger import logger, check_parsing_error
+from youtube_crawler.logger import check_parsing_error
 from youtube_crawler.utils import get_video_path, get_video_id
 
 
@@ -28,9 +27,6 @@ class Collector:
     def __init__(self, browser: Firefox | Chrome, nums_per_page=20) -> None:
         self.browser = browser
         self.nums_per_page = nums_per_page
-        self.container_id = subprocess.run(
-            ["hostname"], capture_output=True, text=True
-        ).stdout.strip()
 
     def collect_list_main(self) -> list[VideoSimple]:
         contents = self.browser.find_element(By.ID, "contents")
@@ -156,13 +152,12 @@ class Collector:
             play_time,
             view_count,
             description,
-            channel,
+            channel if channel else "",
             self.get_like_count(like) if like else 0,
             tags,
-            datetime.fromisoformat(upload_date) if upload_date else None,
-            category,
-            next_video_url,
-            self.container_id,
+            datetime.fromisoformat(upload_date) if upload_date else datetime.now(),
+            category if category else "",
+            next_video_url if next_video_url else "",
         )
         return detail
 
@@ -178,14 +173,10 @@ class Collector:
 
             url = elem.get_attribute("href")
 
-            author = (
-                v.find_element(
-                    By.ID,
-                    "avatar-link",
-                )
-                .get_attribute("title")
-                .strip()
-            )
+            author = v.find_element(
+                By.ID,
+                "avatar-link",
+            ).get_attribute("title")
 
         elif screen == Screen.SEARCH:
             elem = v.find_element(By.ID, "video-title")
@@ -197,7 +188,6 @@ class Collector:
                 .find_element(By.ID, "channel-name")
                 .find_element(By.CSS_SELECTOR, "#text > a")
                 .get_attribute("textContent")
-                .strip()
             )
 
         elif screen == Screen.PLAYER:
@@ -212,7 +202,6 @@ class Collector:
                 v.find_element(By.ID, "channel-name")
                 .find_element(By.CSS_SELECTOR, "#text")
                 .get_attribute("textContent")
-                .strip()
             )
 
         elif screen == Screen.CHANNEL:
@@ -220,7 +209,7 @@ class Collector:
 
             url = elem.get_attribute("href")
 
-            author = None
+            author = ""
 
         else:
             return None
@@ -236,10 +225,11 @@ class Collector:
         play_time = play_time if ":" in play_time else "live"
 
         aria = elem.get_attribute("aria-label")
-        aria = unicodedata.normalize("NFC", aria)
+        aria = unicodedata.normalize("NFC", aria if aria else "").strip()
         title = elem.get_attribute("title")
-        title = unicodedata.normalize("NFC", title)
+        title = unicodedata.normalize("NFC", title if title else "").strip()
 
+        author = author if author else ""
         if not author and aria:
             words = (
                 aria.removeprefix(title).lstrip().removeprefix("게시자:").lstrip().split()
@@ -251,15 +241,14 @@ class Collector:
             author = " ".join(words)
 
         view_count = self.get_view_count(aria, title, author)
-        id = get_video_id(url)
+        id = get_video_id(url if url else "")
         simple = VideoSimple(
             id,
             title,
-            author,
-            url,
+            author.strip() if author else "",
+            url if url else "",
             play_time,
             view_count,
-            self.container_id,
         )
         return simple
 
@@ -303,8 +292,7 @@ class Collector:
             return VideoAd(
                 headline,
                 description,
-                icon,
-                self.container_id,
+                icon if icon else "",
             )
         except NoSuchElementException:
             return None
@@ -312,7 +300,8 @@ class Collector:
     def get_view_count(self, aria: str, title: str, author: str) -> int:
         aria = unicodedata.normalize("NFC", aria)
         view_count = (
-            aria.removeprefix(title)
+            aria.strip()
+            .removeprefix(title.strip())
             .lstrip()
             .removeprefix("게시자:")
             .lstrip()

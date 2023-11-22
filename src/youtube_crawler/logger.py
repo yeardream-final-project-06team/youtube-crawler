@@ -8,8 +8,7 @@ import msgspec
 import requests
 
 logger = logging.getLogger("web-crawler-container")
-discord_webhook = os.getenv("DISCOED_WEBHOOK_URL", "")
-
+DISCOED_WEBHOOK_URL = os.getenv("DISCOED_WEBHOOK_URL", "")
 
 if os.getenv("MODE", "dev") == "prod":
     logging.basicConfig(level=logging.INFO)
@@ -30,7 +29,8 @@ def call_logger(func):
             error_type = type(e).__name__  # 에러 타입
             error_msg = str(e)  # 에러 메시지
             send_msg = f"ErrorType: {error_type}\nErrorMessage: {error_msg}"
-            requests.post(discord_webhook, json={"content": send_msg})
+            if DISCOED_WEBHOOK_URL:
+                requests.post(DISCOED_WEBHOOK_URL, json={"content": send_msg})
 
             sys.exit()
 
@@ -53,7 +53,7 @@ def check_parsing_error(func):
                 ]:
                     continue
                 logger.error(f"attribution for {attr} not found")
-                logger.error(msgspec.json.encode(result).decode('utf-8'))
+                logger.error(msgspec.json.encode(result))
                 break
         return result
 

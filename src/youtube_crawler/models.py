@@ -1,38 +1,37 @@
-from msgspec import Struct
 from datetime import datetime
+from dataclasses import dataclass
 
 
-class VideoAd(Struct):
-    headline: str | None
-    description: str | None
-    icon: str | None
-    container_id: str
+@dataclass
+class VideoAd:
+    headline: str
+    description: str
+    icon: str
 
 
-class VideoDetail(Struct):
-    id: str | None
-    title: str | None
-    author: str | None
-    url: str | None
-    play_time: str | None
-    view_count: int | None
-    description: str | None
-    channel: str | None
-    like: int | None
-    tags: list[str] | None
-    upload_date: datetime | None
-    category: str | None
-    next_video_url: str | None
-    container_id: str
+@dataclass
+class VideoDetail:
+    id: str
+    title: str
+    author: str
+    url: str
+    play_time: str
+    view_count: int
+    description: str
+    channel: str
+    like: int
+    tags: list[str]
+    upload_date: datetime
+    category: str
+    next_video_url: str
     ads: list[VideoAd] = []
 
 
-class VideoSimple(Struct):
-    id: str | None
-    title: str | None
-    author: str | None
-    url: str | None
-    play_time: str | None
-    view_count: int | None
-    container_id: str
-
+@dataclass
+class VideoSimple:
+    id: str
+    title: str
+    author: str
+    url: str
+    play_time: str
+    view_count: int

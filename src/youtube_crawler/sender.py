@@ -1,10 +1,12 @@
 import os
+import subprocess
+from datetime import datetime
 
 import msgspec
 from elasticsearch import Elasticsearch
 
 from youtube_crawler.logger import logger
-from youtube_crawler.models import VideoDetail, VideoSimple
+from youtube_crawler.models import VideoDetail, VideoSimple, VideoAd
 
 
 ELASTICSEARCH_HOST = os.getenv("ELASTICSEARCH_HOST", "http://localhost")
@@ -15,11 +17,21 @@ class Sender:
     def __init__(self):
         self.es = Elasticsearch(f"{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}")
 
-    def send_one(self, index: str, video: VideoDetail | VideoSimple) -> None:
-        body:bytes = msgspec.json.encode(video).decode('utf-8')
-        res = self.es.index(index=index, body=body)
-        logger.info(body)
+        self.container_id = subprocess.run(
+            ["hostname"], capture_output=True, text=True
+        ).stdout.strip()
 
-    def send_many(self, index: str, videos: list[VideoDetail | VideoSimple]) -> None:
+    def send_one(
+        self,
+        index: str,
+        video: VideoDetail | VideoSimple | VideoAd,
+    ) -> None:
+        data = video.__dict__
+        data["timestamp"] = datetime.now().isoformat()
+        data["container_id"] = self.container_id
+        res = self.es.index(index=index, body=msgspec.json.encode(data))
+        logger.info(msgspec.json.encode(res.body))
+
+    def send_many(self, index: str, videos: list[VideoSimple]) -> None:
         for v in videos:
             self.send_one(index, v)
