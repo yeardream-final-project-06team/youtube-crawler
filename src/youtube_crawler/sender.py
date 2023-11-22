@@ -6,16 +6,15 @@ import msgspec
 from elasticsearch import Elasticsearch
 
 from youtube_crawler.logger import logger
-from youtube_crawler.models import VideoDetail, VideoSimple, VideoAd
+from youtube_crawler.models import VideoAd, VideoDetail, VideoSimple
 
-
-ELASTICSEARCH_HOST = os.getenv("ELASTICSEARCH_HOST", "http://localhost")
+ELASTICSEARCH_HOST = os.getenv("ELASTICSEARCH_HOST", "localhost")
 ELASTICSEARCH_PORT = os.getenv("ELASTICSEARCH_PORT", "9200")
 
 
 class Sender:
     def __init__(self):
-        self.es = Elasticsearch(f"{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}")
+        self.es = Elasticsearch(f"http://{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}")
 
         self.container_id = subprocess.run(
             ["hostname"], capture_output=True, text=True

@@ -1,8 +1,8 @@
 import os
 import sys
 
+from selenium.webdriver import Chrome, Firefox, FirefoxOptions, FirefoxProfile
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver import Firefox, FirefoxOptions, FirefoxProfile, Chrome
 
 from youtube_crawler.persona import Persona
 
@@ -24,7 +24,7 @@ if __name__ == "__main__":
         browser = Chrome(service=service)
 
     name = sys.argv[1]
-    keywords = sys.argv[2].split(',')
+    keywords = sys.argv[2].split(",")
     persona = Persona(
         name,
         keywords,

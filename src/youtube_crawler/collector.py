@@ -1,19 +1,19 @@
+import unicodedata
 from datetime import datetime
 from enum import Enum
-from time import sleep
 from random import random
-import unicodedata
+from time import sleep
 
-from selenium.webdriver import Firefox, Chrome
-from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver import Chrome, Firefox
+from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.wait import WebDriverWait
 
-from youtube_crawler.models import VideoSimple, VideoDetail, VideoAd
 from youtube_crawler.logger import check_parsing_error
-from youtube_crawler.utils import get_video_path, get_video_id
+from youtube_crawler.models import VideoAd, VideoDetail, VideoSimple
+from youtube_crawler.utils import get_video_id, get_video_path
 
 
 class Screen(Enum):
