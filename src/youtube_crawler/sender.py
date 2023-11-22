@@ -33,8 +33,7 @@ class Sender:
         )
         data["container_id"] = self.container_id
         data["persona"] = self.name
-        res = self.es.index(index=index, body=msgspec.json.encode(data))
-        logger.info(msgspec.json.encode(res.body))
+        self.es.index(index=index, body=msgspec.json.encode(data))
 
     def send_many(self, index: str, videos: list[VideoSimple]) -> None:
         for v in videos:
