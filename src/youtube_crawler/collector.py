@@ -235,9 +235,9 @@ class Collector:
             return None
         play_time = play_time if ":" in play_time else "live"
 
-        aria = elem.get_attribute("aria-label").strip()
+        aria = elem.get_attribute("aria-label")
         aria = unicodedata.normalize("NFC", aria)
-        title = elem.get_attribute("title").strip()
+        title = elem.get_attribute("title")
         title = unicodedata.normalize("NFC", title)
 
         if not author and aria:

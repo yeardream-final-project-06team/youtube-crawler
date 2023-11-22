@@ -24,7 +24,7 @@ if __name__ == "__main__":
         browser = Chrome(service=service)
 
     name = sys.argv[1]
-    keywords = sys.argv[2].split()
+    keywords = sys.argv[2].split(',')
     persona = Persona(
         name,
         keywords,

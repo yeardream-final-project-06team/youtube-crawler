@@ -8,5 +8,5 @@ cd youtube-crawler
 
 docker build -t youtube-crawler:latest .
 
-docker run --rm -e MOD=prod -e ELASTICSEARCH_HOST=[IP] youtube-crawler:latest python3 /youtube-crawler/src/main.py
+docker run --rm -e MODE=prod -e ELASTICSEARCH_HOST=[IP] -e ELASTICSEARCH_PORT=[PORT] youtube-crawler:latest python3 /youtube-crawler/src/main.py [name] [keyword1,keyword2,...]
 ```

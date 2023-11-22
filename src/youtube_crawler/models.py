@@ -2,6 +2,13 @@ from msgspec import Struct
 from datetime import datetime
 
 
+class VideoAd(Struct):
+    headline: str | None
+    description: str | None
+    icon: str | None
+    container_id: str
+
+
 class VideoDetail(Struct):
     id: str | None
     title: str | None
@@ -17,6 +24,7 @@ class VideoDetail(Struct):
     category: str | None
     next_video_url: str | None
     container_id: str
+    ads: list[VideoAd] = []
 
 
 class VideoSimple(Struct):
@@ -28,9 +36,3 @@ class VideoSimple(Struct):
     view_count: int | None
     container_id: str
 
-
-class VideoAd(Struct):
-    headline: str | None
-    description: str | None
-    icon: str | None
-    container_id: str

@@ -10,10 +10,11 @@ import requests
 logger = logging.getLogger("web-crawler-container")
 discord_webhook = os.getenv("DISCOED_WEBHOOK_URL", "")
 
+
 if os.getenv("MODE", "dev") == "prod":
-    logger.setLevel(logging.INFO)
+    logging.basicConfig(level=logging.INFO)
 else:
-    logger.setLevel(logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
 
 
 def call_logger(func):
@@ -52,7 +53,7 @@ def check_parsing_error(func):
                 ]:
                     continue
                 logger.error(f"attribution for {attr} not found")
-                logger.error(msgspec.json.encode(result))
+                logger.error(msgspec.json.encode(result).decode('utf-8'))
                 break
         return result
 
