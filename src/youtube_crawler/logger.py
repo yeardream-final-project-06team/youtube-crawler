@@ -7,11 +7,26 @@ import traceback
 import msgspec
 import requests
 
-logger = logging.getLogger("web-crawler-container")
 DISCOED_WEBHOOK_URL = os.getenv("DISCOED_WEBHOOK_URL", "")
 
+# 사용자 정의 로그 레벨 생성
+NOTICE_LEVEL = 25  # INFO(20)와 WARNING(30) 사이
+logging.addLevelName(NOTICE_LEVEL, 'NOTICE')
+
+def notice(self, message, *args, **kws):
+    if self.isEnabledFor(NOTICE_LEVEL):
+        self._log(NOTICE_LEVEL, message, args, **kws)
+
+logging.Logger.notice = notice
+
+# 로거 설정
+response = requests.get("https://httpbin.org/ip")
+ip = response.json()['origin'] if response.status_code == 200 else "unknown"
+logger = logging.getLogger(ip)
+logger.setLevel(NOTICE_LEVEL)
+
 if os.getenv("MODE", "dev") == "prod":
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=NOTICE_LEVEL)
 else:
     logging.basicConfig(level=logging.DEBUG)
 
@@ -50,6 +65,7 @@ def check_parsing_error(func):
                     "likes",
                     "view_count",
                     "description",
+                    "ads",
                 ]:
                     continue
                 logger.error(f"attribution for {attr} not found")

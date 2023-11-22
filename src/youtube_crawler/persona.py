@@ -49,7 +49,7 @@ class Persona:
 
         # 영상 10개 볼때까지 반복
         while self.watch_count:
-            logger.info(f"video #{11 - self.watch_count}")
+            logger.notice(f"video #{11 - self.watch_count}")
             # 영상 고르는 시간
             sleep(random() * 10)
 
@@ -81,7 +81,7 @@ class Persona:
 
         # 수집된 데이터 전송
         self.sender.send_many("video_simple", self.video_list)
-        logger.info(f"moved to search, collected {len(self.video_list)} videos")
+        logger.notice(f"moved to search, collected {len(self.video_list)} videos")
 
     def move_to_main(self) -> None:
         self.browser.get("https://www.youtube.com/?gl=KR")
@@ -94,7 +94,7 @@ class Persona:
 
         # 수집된 데이터 전송
         self.sender.send_many("video_simple", self.video_list)
-        logger.info(f"moved to main, collected {len(self.video_list)} videos")
+        logger.notice(f"moved to main, collected {len(self.video_list)} videos")
 
     def move_to_channel(self) -> None:
         if not self.last_video:
@@ -109,13 +109,13 @@ class Persona:
 
         # 수집된 데이터 전송
         self.sender.send_many("video_simple", self.video_list)
-        logger.info(f"moved to channel, collected {len(self.video_list)} videos")
+        logger.notice(f"moved to channel, collected {len(self.video_list)} videos")
 
     def watch_recommendation(self) -> None:
-        logger.info("watch watch_recommendation")
+        logger.notice("watch watch_recommendation")
 
     def watch_video(self) -> None:
-        logger.info("watching video")
+        logger.notice("watching video")
         video = choice(self.video_list)
         self.browser.get(video.url)
 
@@ -135,7 +135,7 @@ class Persona:
 
         # 수집된 데이터 전송
         self.sender.send_many("video_simple", self.video_list)
-        logger.info(f"watching video, collected {len(self.video_list)} videos")
+        logger.notice(f"watching video, collected {len(self.video_list)} videos")
 
         # 영상시청
         play_time = cvt_play_time(self.last_video.play_time)
