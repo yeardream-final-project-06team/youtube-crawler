@@ -164,7 +164,8 @@ while True:
     if running_count < desired_count:
         for _ in range(desired_count - running_count):
             start_container(image_name)
-            print(f"새 컨테이너를 시작합니다. 현재 실행 중인 컨테이너 수: {running_count + 1}")
+            running_count += 1
+            print(f"새 컨테이너를 시작합니다. 현재 실행 중인 컨테이너 수: {running_count}")
             time.sleep(1)  # 컨테이너가 시작되는 동안 대기
 
     time.sleep(30)  # 30초 간격으로 상태를 확인
