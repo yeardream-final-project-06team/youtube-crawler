@@ -27,6 +27,7 @@ class Collector:
     def __init__(self, browser: Firefox | Chrome, nums_per_page=20) -> None:
         self.browser = browser
         self.nums_per_page = nums_per_page
+        self.last_ad = None
 
     def collect_list_main(self) -> list[VideoSimple]:
         contents = self.browser.find_element(By.ID, "contents")
@@ -265,6 +266,9 @@ class Collector:
                 "ytp-flyout-cta-headline",
             ).text
 
+            if not headline:
+                return None
+
             description = self.browser.find_element(
                 By.CLASS_NAME,
                 "ytp-flyout-cta-description",
@@ -295,11 +299,15 @@ class Collector:
                         (By.CLASS_NAME, "ytp-ad-preview-container")
                     )
                 )
-            return VideoAd(
+            ad = VideoAd(
                 headline,
                 description,
                 icon if icon else "",
             )
+            if self.last_ad == ad:
+                return None
+            self.last_ad = ad
+            return ad
         except NoSuchElementException:
             return None
 
