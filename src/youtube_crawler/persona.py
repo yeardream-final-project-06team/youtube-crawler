@@ -137,6 +137,11 @@ class Persona:
         self.sender.send_many("video_simple", self.video_list)
         logger.info(f"watching video, collected {len(self.video_list)} videos")
 
+        #tag 저장
+        with open(f'/keywords/{self.name}', 'a') as f:
+            tags = ','.join(self.last_video.tags) + ','
+            f.write(tags)
+
         # 영상시청
         play_time = cvt_play_time(self.last_video.play_time)
         watching_time = (1 + random() * 9) * 60

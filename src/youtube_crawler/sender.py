@@ -29,7 +29,7 @@ class Sender:
         data = video.__dict__
         data["timestamp"] = datetime.now().isoformat()
         data["container_id"] = self.container_id
-        res = self.es.index(index=index, body=msgspec.json.encode(data))
+        res = self.es.index(index=index, body=msgspec.json.encode(data).decode('utf-8'))
         logger.info(msgspec.json.encode(res.body))
 
     def send_many(self, index: str, videos: list[VideoSimple]) -> None:

@@ -1,5 +1,5 @@
 from datetime import datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -24,7 +24,7 @@ class VideoDetail:
     upload_date: datetime
     category: str
     next_video_url: str
-    ads: list[VideoAd] = []
+    ads: list[VideoAd] = field(default_factory=list)
 
 
 @dataclass

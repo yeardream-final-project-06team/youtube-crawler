@@ -42,9 +42,8 @@ RUN apt-get install -y glibc-source libgtk-3-0 libdbus-glib-1-dev libglib2.0-0 l
     rm firefox.tar.bz2
 
 #install crawler & dependencies
-RUN git clone https://github.com/yeardream-final-project-06team/youtube-crawler.git &&\
-    cd /youtube-crawler &&\
-    git switch dev &&\
+COPY . /youtube-crawler
+RUN cd /youtube-crawler &&\
     pip3 install -r requirements.txt &&\
     pip3 install -e ./
 
