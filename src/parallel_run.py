@@ -6,7 +6,7 @@ from pathlib import Path
 
 image_name = "youtube-crawler:latest"  # 실행할 Docker 이미지
 desired_count = 2  # 유지하려는 컨테이너의 수
-ELASTICSEARCH_HOST = "http://13.125.43.3"
+ELASTICSEARCH_HOST = "13.125.43.3"
 ELASTICSEARCH_PORT = 9200
 
 keyword_dir_path = Path(__file__).parent.parent / 'keywords'

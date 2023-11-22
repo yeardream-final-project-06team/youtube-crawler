@@ -7,6 +7,8 @@ import traceback
 import msgspec
 import requests
 
+from youtube_crawler.models import VideoSimple
+
 logger = logging.getLogger("web-crawler-container")
 DISCOED_WEBHOOK_URL = os.getenv("DISCOED_WEBHOOK_URL", "")
 
@@ -43,7 +45,7 @@ def check_parsing_error(func):
         result = func(*args, **kwargs)
         if not result:
             return result
-        for attr in result.__struct_fields__:
+        for attr in result.__dict__:
             if not getattr(result, attr):
                 if attr in [
                     "tags",
