@@ -30,7 +30,7 @@ class Persona:
         self.browser = browser
         self.browser.set_window_size(1920, 3000)
         self.collector = Collector(self.browser, nums_per_page)
-        self.sender = Sender()
+        self.sender = Sender(self.name)
         self.debug = debug
 
         self.last_video = None

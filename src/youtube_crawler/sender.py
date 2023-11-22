@@ -13,12 +13,14 @@ ELASTICSEARCH_PORT = os.getenv("ELASTICSEARCH_PORT", "9200")
 
 
 class Sender:
-    def __init__(self):
+    def __init__(self, name: str):
         self.es = Elasticsearch(f"http://{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}")
 
         self.container_id = subprocess.run(
             ["hostname"], capture_output=True, text=True
         ).stdout.strip()
+
+        self.name = name
 
     def send_one(
         self,
@@ -30,6 +32,7 @@ class Sender:
             datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
         )
         data["container_id"] = self.container_id
+        data["persona"] = self.name
         res = self.es.index(index=index, body=msgspec.json.encode(data))
         logger.info(msgspec.json.encode(res.body))
 
