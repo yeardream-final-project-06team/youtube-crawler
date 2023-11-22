@@ -27,7 +27,9 @@ class Sender:
         video: VideoDetail | VideoSimple | VideoAd,
     ) -> None:
         data = video.__dict__
-        data["timestamp"] = datetime.now().isoformat()
+        data["@timestamp"] = (
+            datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+        )
         data["container_id"] = self.container_id
         res = self.es.index(index=index, body=msgspec.json.encode(data))
         logger.info(msgspec.json.encode(res.body))
