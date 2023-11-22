@@ -1,16 +1,16 @@
+from datetime import datetime
 from random import choice, random
 from time import sleep
-from datetime import datetime
 
-from selenium.webdriver import Firefox, Chrome
+from selenium.webdriver import Chrome, Firefox
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.common.by import By
 
 from youtube_crawler.collector import Collector
-from youtube_crawler.logger import logger, call_logger
-from youtube_crawler.utils import cvt_play_time
+from youtube_crawler.logger import call_logger, logger
 from youtube_crawler.sender import Sender
+from youtube_crawler.utils import cvt_play_time
 
 
 class Persona:

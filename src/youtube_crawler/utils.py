@@ -1,5 +1,5 @@
 from random import random
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import parse_qs, urlparse
 
 from youtube_crawler.logger import logger
 
