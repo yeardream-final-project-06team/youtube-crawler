@@ -20,9 +20,7 @@ def notice(self, message, *args, **kws):
 logging.Logger.notice = notice
 
 # 로거 설정
-response = requests.get("https://httpbin.org/ip")
-ip = response.json()['origin'] if response.status_code == 200 else "unknown"
-logger = logging.getLogger(ip)
+logger = logging.getLogger("crawler")
 logger.setLevel(NOTICE_LEVEL)
 
 if os.getenv("MODE", "dev") == "prod":
