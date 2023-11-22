@@ -30,7 +30,7 @@ class Sender:
             datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
         )
         data["container_id"] = self.container_id
-        res = self.es.index(index=index, body=msgspec.json.encode(data).decode('utf-8'))
+        res = self.es.index(index=index, body=msgspec.json.encode(data))
         logger.info(msgspec.json.encode(res.body))
 
     def send_many(self, index: str, videos: list[VideoSimple]) -> None:

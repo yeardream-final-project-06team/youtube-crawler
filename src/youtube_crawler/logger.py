@@ -7,8 +7,6 @@ import traceback
 import msgspec
 import requests
 
-from youtube_crawler.models import VideoSimple
-
 logger = logging.getLogger("web-crawler-container")
 DISCOED_WEBHOOK_URL = os.getenv("DISCOED_WEBHOOK_URL", "")
 
