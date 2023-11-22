@@ -229,23 +229,29 @@ class Collector:
         title = elem.get_attribute("title")
         title = unicodedata.normalize("NFC", title if title else "").strip()
 
-        author = author if author else ""
+        author = author.strip() if author else ""
         if not author and aria:
             words = (
-                aria.removeprefix(title).lstrip().removeprefix("게시자:").lstrip().split()
+                aria.lstrip()
+                .removeprefix(title)
+                .lstrip()
+                .removeprefix("게시자:")
+                .strip()
+                .split()
             )
             if "조회수" not in words:
                 return None
             while words and words.pop() != "조회수":
                 continue
             author = " ".join(words)
+        author = unicodedata.normalize("NFC", author).strip()
 
         view_count = self.get_view_count(aria, title, author)
         id = get_video_id(url if url else "")
         simple = VideoSimple(
             id,
             title,
-            author.strip() if author else "",
+            author,
             url if url else "",
             play_time,
             view_count,
@@ -298,10 +304,8 @@ class Collector:
             return None
 
     def get_view_count(self, aria: str, title: str, author: str) -> int:
-        aria = unicodedata.normalize("NFC", aria)
         view_count = (
-            aria.strip()
-            .removeprefix(title.strip())
+            aria.removeprefix(title)
             .lstrip()
             .removeprefix("게시자:")
             .lstrip()
