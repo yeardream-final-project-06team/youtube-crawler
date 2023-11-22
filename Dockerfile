@@ -41,7 +41,6 @@ RUN apt-get install -y glibc-source libgtk-3-0 libdbus-glib-1-dev libglib2.0-0 l
     ln -s /opt/firefox/firefox /usr/local/bin/firefox &&\
     rm firefox.tar.bz2
 
-RUN echo 'asdf'
 #install crawler & dependencies
 RUN git clone https://github.com/yeardream-final-project-06team/youtube-crawler.git &&\
     cd /youtube-crawler &&\

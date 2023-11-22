@@ -16,8 +16,8 @@ class Sender:
         self.es = Elasticsearch(f"{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}")
 
     def send_one(self, index: str, video: VideoDetail | VideoSimple) -> None:
-        body:bytes = msgspec.json.encode(video)
-        res = self.es.index(index=index, body=body.decode('utf-8'))
+        body:bytes = msgspec.json.encode(video).decode('utf-8')
+        res = self.es.index(index=index, body=body)
         logger.info(body)
 
     def send_many(self, index: str, videos: list[VideoDetail | VideoSimple]) -> None:
