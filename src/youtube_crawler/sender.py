@@ -1,4 +1,5 @@
 import os
+import hashlib
 import subprocess
 from datetime import datetime
 
@@ -21,6 +22,7 @@ class Sender:
         ).stdout.strip()
 
         self.name = name
+        self.hashed = hashlib.md5(name.encode("utf-8")).hexdigest()
 
     def send_one(
         self,
@@ -33,6 +35,7 @@ class Sender:
         )
         data["container_id"] = self.container_id
         data["persona"] = self.name
+        index += f"_{self.hashed}"
         self.es.index(index=index, body=msgspec.json.encode(data))
 
     def send_many(self, index: str, videos: list[VideoSimple]) -> None:

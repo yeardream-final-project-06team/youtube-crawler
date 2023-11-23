@@ -19,10 +19,10 @@ ARG ARCHITECTURE="dpkg --print-architecture" \
 
 # install Tor
 RUN echo \
-"deb [signed-by=/usr/share/keyrings/tor-archive-keyring.gpg] https://deb.torproject.org/torproject.org $(eval ${DISTRIBUTION}) main\n\
-deb-src [signed-by=/usr/share/keyrings/tor-archive-keyring.gpg] https://deb.torproject.org/torproject.org $(eval ${DISTRIBUTION}) main\n\
-deb     [arch=$(eval ${ARCHITECTURE}) signed-by=/usr/share/keyrings/tor-archive-keyring.gpg] https://deb.torproject.org/torproject.org focal main\n\
-deb-src [arch=$(eval ${ARCHITECTURE}) signed-by=/usr/share/keyrings/tor-archive-keyring.gpg] https://deb.torproject.org/torproject.org focal main" > /etc/apt/sources.list.d/tor.list &&\
+    "deb [signed-by=/usr/share/keyrings/tor-archive-keyring.gpg] https://deb.torproject.org/torproject.org $(eval ${DISTRIBUTION}) main\n\
+    deb-src [signed-by=/usr/share/keyrings/tor-archive-keyring.gpg] https://deb.torproject.org/torproject.org $(eval ${DISTRIBUTION}) main\n\
+    deb     [arch=$(eval ${ARCHITECTURE}) signed-by=/usr/share/keyrings/tor-archive-keyring.gpg] https://deb.torproject.org/torproject.org focal main\n\
+    deb-src [arch=$(eval ${ARCHITECTURE}) signed-by=/usr/share/keyrings/tor-archive-keyring.gpg] https://deb.torproject.org/torproject.org focal main" > /etc/apt/sources.list.d/tor.list &&\
     wget -qO- https://deb.torproject.org/torproject.org/A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89.asc | gpg --dearmor | tee /usr/share/keyrings/tor-archive-keyring.gpg >/dev/null && \
     apt-get update && \
     apt-get install -y tor deb.torproject.org-keyring 
@@ -43,8 +43,10 @@ RUN apt-get install -y glibc-source libgtk-3-0 libdbus-glib-1-dev libglib2.0-0 l
 
 #install crawler & dependencies
 COPY . /youtube-crawler
+RUN chmod +x /youtube-crawler/src/start.sh
+
 RUN cd /youtube-crawler &&\
     pip3 install -r requirements.txt &&\
     pip3 install -e ./
 
-RUN echo "service tor start" >> /root/.bashrc
+ENTRYPOINT [ "/youtube-crawler/src/start.sh" ]

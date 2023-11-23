@@ -2,8 +2,8 @@ import random
 import subprocess
 import time
 
-image_name = "youtube-crawler:latest"  # 실행할 Docker 이미지
-desired_count = 2  # 유지하려는 컨테이너의 수
+image_name = ""  # 실행할 Docker 이미지
+desired_count = 1  # 유지하려는 컨테이너의 수
 ELASTICSEARCH_HOST = ""
 ELASTICSEARCH_PORT = 9200
 SYSLOG_HOST = ""
@@ -148,7 +148,6 @@ def start_container(image_name):
         "--log-driver=syslog",
         f"--log-opt syslog-address=tcp://{SYSLOG_HOST}:{SYSLOG_PORT}",
         f"{image_name}",
-        "python3 -u /youtube-crawler/src/main.py",
         f"{name}",
         f"{keywords}",
     ]
