@@ -141,6 +141,7 @@ def start_container(image_name):
     args = [
         "docker run",
         "--rm",
+        "--platform linux/amd64",
         f"-e MODE={MODE}",
         f"-e ELASTICSEARCH_HOST={ELASTICSEARCH_HOST}",
         f"-e ELASTICSEARCH_PORT={ELASTICSEARCH_PORT}",
