@@ -37,6 +37,13 @@ class Persona:
         self.related = True
         self.video_list = []
 
+        self.browser.get("http://icanhazip.com")
+        ip = self.browser.find_element(
+            By.CSS_SELECTOR,
+            "body > pre:nth-child(1)",
+        ).get_attribute("innerHTML")
+        logger.notice(f"ip: {ip}")
+
         self.browser.get("https://www.youtube.com/?gl=KR")
 
     @call_logger

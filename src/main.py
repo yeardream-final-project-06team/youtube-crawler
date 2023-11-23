@@ -13,6 +13,9 @@ if __name__ == "__main__":
         profile = FirefoxProfile()
         profile.set_preference("permissions.default.image", 2)
         profile.set_preference("intl.accept_languages", "ko-kr,en-us,en")
+        profile.set_preference("network.proxy.type", 1)
+        profile.set_preference("network.proxy.socks", "127.0.0.1")
+        profile.set_preference("network.proxy.socks_port", 9050)
 
         options = FirefoxOptions()
         options.add_argument("--headless")
@@ -22,7 +25,6 @@ if __name__ == "__main__":
     else:
         service = Service(executable_path="./chromedriver")
         browser = Chrome(service=service)
-
     name = sys.argv[1]
     keywords = sys.argv[2].split(",")
     persona = Persona(
