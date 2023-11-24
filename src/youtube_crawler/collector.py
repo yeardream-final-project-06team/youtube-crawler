@@ -30,7 +30,7 @@ class Collector:
         self.last_ad = None
 
     def collect_list_main(self) -> list[VideoSimple]:
-        contents = self.browser.find_element(By.ID, "contents")
+        contents = self.find_element(By.ID, "contents")
         rows = contents.find_elements(By.TAG_NAME, "ytd-rich-grid-row")
 
         data = []
@@ -45,7 +45,7 @@ class Collector:
         return data
 
     def collect_list_search(self) -> list[VideoSimple]:
-        contents = self.browser.find_element(By.ID, "contents")
+        contents = self.find_element(By.ID, "contents")
         sections = contents.find_elements(
             By.TAG_NAME,
             "ytd-item-section-renderer",
@@ -62,9 +62,7 @@ class Collector:
         return data
 
     def collect_list_player(self) -> list[VideoSimple]:
-        contents = self.browser.find_element(By.ID, "related").find_element(
-            By.ID, "items"
-        )
+        contents = self.find_element(By.ID, "related").find_element(By.ID, "items")
         videos = contents.find_elements(
             By.TAG_NAME,
             "ytd-compact-video-renderer",
@@ -80,7 +78,7 @@ class Collector:
         return data
 
     def collect_list_channel(self) -> list[VideoSimple]:
-        contents = self.browser.find_element(By.ID, "contents")
+        contents = self.find_element(By.ID, "contents")
         sections = contents.find_elements(
             By.TAG_NAME,
             "ytd-item-section-renderer",
@@ -107,22 +105,22 @@ class Collector:
 
         self.browser.execute_script("window.scrollTo(0,0)")
 
-        description = self.browser.find_element(By.ID, "description-inner")
+        description = self.find_element(By.ID, "description-inner")
         description.click()
         description = description.find_element(
             By.CSS_SELECTOR,
             "#description-inline-expander > yt-attributed-string",
         ).text
 
-        like = self.browser.find_element(
+        like = self.find_element(
             By.CSS_SELECTOR,
             "#segmented-like-button > ytd-toggle-button-renderer > yt-button-shape > button",
         ).get_attribute("aria-label")
 
-        tags = self.browser.find_elements(By.CSS_SELECTOR, "#info > a")
+        tags = self.find_elements(By.CSS_SELECTOR, "#info > a")
         tags = [t.text for t in tags]
 
-        content = self.browser.find_element(By.ID, "watch7-content")
+        content = self.find_element(By.ID, "watch7-content")
         channel = content.find_element(
             By.CSS_SELECTOR,
             "#watch7-content > span:nth-child(7) > link:nth-child(1)",
@@ -138,7 +136,7 @@ class Collector:
             "#watch7-content > meta:nth-child(20)",
         ).get_attribute("content")
 
-        next_video_url = self.browser.find_element(
+        next_video_url = self.find_element(
             By.CSS_SELECTOR,
             "#movie_player > div.ytp-chrome-bottom > div.ytp-chrome-controls > div.ytp-left-controls > a.ytp-next-button.ytp-button",
         ).get_attribute("href")
@@ -261,7 +259,7 @@ class Collector:
 
     def collect_ad(self):
         try:
-            headline = self.browser.find_element(
+            headline = self.find_element(
                 By.CLASS_NAME,
                 "ytp-flyout-cta-headline",
             ).text
@@ -269,17 +267,17 @@ class Collector:
             if not headline:
                 return None
 
-            description = self.browser.find_element(
+            description = self.find_element(
                 By.CLASS_NAME,
                 "ytp-flyout-cta-description",
             ).text
 
-            icon = self.browser.find_element(
+            icon = self.find_element(
                 By.CLASS_NAME,
                 "ytp-flyout-cta-icon",
             ).get_attribute("src")
 
-            preview = self.browser.find_element(
+            preview = self.find_element(
                 By.CLASS_NAME,
                 "ytp-ad-preview-container",
             ).text
@@ -339,3 +337,15 @@ class Collector:
             .strip()
             .replace(",", "")
         )
+
+    def find_element(self, by: str, value: str, timeout=30) -> WebElement:
+        element = WebDriverWait(self.browser, timeout).until(
+            EC.presence_of_element_located((by, value))
+        )
+        return element
+
+    def find_elements(self, by: str, value: str, timeout=30) -> list[WebElement]:
+        elements = WebDriverWait(self.browser, timeout).until(
+            EC.presence_of_all_elements_located((by, value))
+        )
+        return elements
