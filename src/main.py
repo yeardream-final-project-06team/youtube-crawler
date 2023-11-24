@@ -22,6 +22,7 @@ if __name__ == "__main__":
         options._profile = profile
 
         browser = Firefox(options=options)
+        browser.set_window_size(1920, 3000)
     else:
         service = Service(executable_path="./chromedriver")
         browser = Chrome(service=service)
