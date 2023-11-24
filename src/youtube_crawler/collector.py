@@ -262,6 +262,7 @@ class Collector:
             headline = self.find_element(
                 By.CLASS_NAME,
                 "ytp-flyout-cta-headline",
+                5,
             ).text
 
             if not headline:
@@ -306,7 +307,7 @@ class Collector:
                 return None
             self.last_ad = ad
             return ad
-        except NoSuchElementException:
+        except Exception:
             return None
 
     def get_view_count(self, aria: str, title: str, author: str) -> int:
