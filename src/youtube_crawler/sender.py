@@ -1,6 +1,6 @@
 import hashlib
 import os
-import uuid
+import subprocess
 from datetime import datetime
 
 import msgspec
@@ -16,7 +16,9 @@ class Sender:
     def __init__(self, name: str):
         self.es = Elasticsearch(f"http://{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}")
 
-        self.job_id = str(uuid.uuid4())
+        self.container_id = subprocess.run(
+            ["hostname"], capture_output=True, text=True
+        ).stdout.strip()
 
         self.name = name
         self.hashed = hashlib.md5(name.encode("utf-8")).hexdigest()
@@ -30,7 +32,7 @@ class Sender:
         data["@timestamp"] = (
             datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
         )
-        data["job_id"] = self.job_id
+        data["container_id"] = self.container_id
         data["persona"] = self.name
         index += f"_{self.hashed}"
         self.es.index(index=index, body=msgspec.json.encode(data))
