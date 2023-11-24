@@ -4,7 +4,6 @@ from enum import Enum
 from random import random
 from time import sleep
 
-from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver import Chrome, Firefox
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
@@ -219,7 +218,7 @@ class Collector:
 
         try:
             play_time = v.find_element(By.ID, "time-status").text
-        except NoSuchElementException:
+        except Exception:
             return None
         play_time = play_time if ":" in play_time else "live"
 
