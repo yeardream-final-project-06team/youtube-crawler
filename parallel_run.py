@@ -2,11 +2,11 @@ import random
 import subprocess
 import time
 
-image_name = ""  # 실행할 Docker 이미지
-desired_count = 1  # 유지하려는 컨테이너의 수
-ELASTICSEARCH_HOST = ""
+image_name = "youtube-crawler:latest"  # 실행할 Docker 이미지
+desired_count = 20  # 유지하려는 컨테이너의 수
+ELASTICSEARCH_HOST = "13.125.43.3"
 ELASTICSEARCH_PORT = 9200
-SYSLOG_HOST = ""
+SYSLOG_HOST = "13.125.43.3"
 SYSLOG_PORT = 514
 DISCOED_WEBHOOK_URL = ""
 MODE = "prod"
@@ -141,7 +141,7 @@ def start_container(image_name):
     args = [
         "docker run",
         "--rm",
-        "--platform linux/amd64",
+        # "--platform linux/amd64",
         f"-e MODE={MODE}",
         f"-e ELASTICSEARCH_HOST={ELASTICSEARCH_HOST}",
         f"-e ELASTICSEARCH_PORT={ELASTICSEARCH_PORT}",
