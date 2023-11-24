@@ -23,7 +23,6 @@ if __name__ == "__main__":
 
         browser = Firefox(options=options)
         browser.set_window_size(1920, 3000)
-        browser.install_addon('/youtube-crawler/h264ify-1.1.0.xpi')
     else:
         service = Service(executable_path="./chromedriver")
         browser = Chrome(service=service)
