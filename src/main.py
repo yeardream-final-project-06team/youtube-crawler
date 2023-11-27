@@ -5,8 +5,11 @@ from selenium.webdriver import Chrome, Firefox, FirefoxOptions, FirefoxProfile
 from selenium.webdriver.chrome.service import Service
 
 from youtube_crawler.persona import Persona
+from faker import Faker
 
 mode = os.getenv("MODE", "dev")
+fake = Faker()
+user_agent = fake.firefox()
 
 if __name__ == "__main__":
     if mode == "prod":
@@ -16,6 +19,7 @@ if __name__ == "__main__":
         profile.set_preference("network.proxy.type", 1)
         profile.set_preference("network.proxy.socks", "127.0.0.1")
         profile.set_preference("network.proxy.socks_port", 9050)
+        profile.set_preference("general.useragent.override", "user_agent")
 
         options = FirefoxOptions()
         options.add_argument("--headless")
