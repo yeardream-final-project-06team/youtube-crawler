@@ -34,12 +34,11 @@ args = [
     f"-e MODE={MODE}",
     f"-e ELASTICSEARCH_HOST={ELASTICSEARCH_HOST}",
     f"-e ELASTICSEARCH_PORT={ELASTICSEARCH_PORT}",
+    f"-e KEYWORD_SERVER={KEYWORD_SERVER}",
     # f"-e DISCOED_WEBHOOK_URL={DISCOED_WEBHOOK_URL}",
     "--log-driver=syslog",
     f"--log-opt syslog-address=tcp://{LOGSTASH_HOST}:{LOGSTASH_PORT}",
     f"{image_name}",
-    f"{name}",
-    f"{keywords}",
 ]
 for arg in args:
     cmd.extend(arg.split())
