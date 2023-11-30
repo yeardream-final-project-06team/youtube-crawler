@@ -10,8 +10,7 @@
 git clone https://github.com/zmfkzj/youtube-crawler.git
 cd youtube-crawler
 
-docker build -t youtube-crawler:latest .
-
+docker build --platform linux/amd64 -t youtube-crawler:latest .
 ```
 
 ## Docker Swarm
