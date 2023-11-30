@@ -40,6 +40,11 @@ To add a manager to this swarm, run 'docker swarm join-token manager' and follow
 docker run --rm -d -p 0.0.0.0:2378:2378 --name swarm-manager-proxy alpine/socat tcp-l:2378,fork,reuseaddr tcp:[docker0 ip]:2377
 ```
 
+```sh
+# [Optional] docker swarm visualizer
+docker run -it -d -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock dockersamples/visualizer
+```
+
 ### Worker Node
 
 ```sh
