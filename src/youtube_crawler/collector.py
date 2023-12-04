@@ -1,16 +1,18 @@
+import unicodedata
 from datetime import datetime
-from urllib.parse import urlparse
 from enum import Enum
+from random import random
+from time import sleep
 
-import msgspec
-from selenium.webdriver import Firefox, Chrome
+from selenium.webdriver import Chrome, Firefox
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.remote.webdriver import WebDriver
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.wait import WebDriverWait
 
-from youtube_crawler.models import VideoSimple, VideoDetail
-from youtube_crawler.logger import logger
+from youtube_crawler.logger import check_parsing_error
+from youtube_crawler.models import VideoAd, VideoDetail, VideoSimple
+from youtube_crawler.utils import get_video_id, get_video_path
 
 
 class Screen(Enum):
@@ -21,11 +23,13 @@ class Screen(Enum):
 
 
 class Collector:
-    def __init__(self, browser: Firefox | Chrome) -> None:
+    def __init__(self, browser: Firefox | Chrome, nums_per_page=20) -> None:
         self.browser = browser
+        self.nums_per_page = nums_per_page
+        self.last_ad = None
 
     def collect_list_main(self) -> list[VideoSimple]:
-        contents = self.browser.find_element(By.ID, "contents")
+        contents = self.find_element(By.ID, "contents")
         rows = contents.find_elements(By.TAG_NAME, "ytd-rich-grid-row")
 
         data = []
@@ -35,12 +39,12 @@ class Collector:
                 video_simple = self.get_video_simple(v, Screen.MAIN)
                 if video_simple:
                     data.append(video_simple)
-                if len(data) == 20:
+                if len(data) == self.nums_per_page:
                     return data
         return data
 
     def collect_list_search(self) -> list[VideoSimple]:
-        contents = self.browser.find_element(By.ID, "contents")
+        contents = self.find_element(By.ID, "contents")
         sections = contents.find_elements(
             By.TAG_NAME,
             "ytd-item-section-renderer",
@@ -52,14 +56,12 @@ class Collector:
                 video_simple = self.get_video_simple(v, Screen.SEARCH)
                 if video_simple:
                     data.append(video_simple)
-                if len(data) == 20:
+                if len(data) == self.nums_per_page:
                     return data
         return data
 
     def collect_list_player(self) -> list[VideoSimple]:
-        contents = self.browser.find_element(By.ID, "related").find_element(
-            By.ID, "items"
-        )
+        contents = self.find_element(By.ID, "related").find_element(By.ID, "items")
         videos = contents.find_elements(
             By.TAG_NAME,
             "ytd-compact-video-renderer",
@@ -70,12 +72,12 @@ class Collector:
             video_simple = self.get_video_simple(v, Screen.PLAYER)
             if video_simple:
                 data.append(video_simple)
-            if len(data) == 20:
+            if len(data) == self.nums_per_page:
                 return data
         return data
 
     def collect_list_channel(self) -> list[VideoSimple]:
-        contents = self.browser.find_element(By.ID, "contents")
+        contents = self.find_element(By.ID, "contents")
         sections = contents.find_elements(
             By.TAG_NAME,
             "ytd-item-section-renderer",
@@ -87,48 +89,41 @@ class Collector:
                 video_simple = self.get_video_simple(v, Screen.CHANNEL)
                 if video_simple:
                     data.append(video_simple)
-                if len(data) == 20:
+                if len(data) == self.nums_per_page:
                     return data
         return data
 
-    def collect_player_page(self) -> tuple[VideoDetail, list[VideoSimple]]:
-        list_data = self.collect_list_player()
-        video_data = self.get_video_detail()
+    @check_parsing_error
+    def get_video_detail(self, video: VideoSimple) -> VideoDetail:
+        id = video.id
+        title = video.title
+        author = video.author
+        url = video.url
+        play_time = video.play_time
+        view_count = video.view_count
 
-        return video_data, list_data
+        self.browser.execute_script("window.scrollTo(0,0)")
 
-    def get_video_detail(self) -> VideoDetail:
-        content = self.browser.find_element(By.ID, "watch7-content")
-
-        url = content.find_element(
+        description = self.find_element(By.ID, "description-inner")
+        description.click()
+        description = description.find_element(
             By.CSS_SELECTOR,
-            "#watch7-content > link:nth-child(1)",
-        ).get_attribute("href")
+            "#description-inline-expander > yt-attributed-string",
+        ).text
 
-        title = content.find_element(
+        like = self.find_element(
             By.CSS_SELECTOR,
-            "#watch7-content > meta:nth-child(2)",
-        ).get_attribute("content")
+            "#segmented-like-button > ytd-toggle-button-renderer > yt-button-shape > button",
+        ).get_attribute("aria-label")
 
-        video_id = content.find_element(
-            By.CSS_SELECTOR,
-            "#watch7-content > meta:nth-child(5)",
-        ).get_attribute("content")
+        tags = self.find_elements(By.CSS_SELECTOR, "#info > a")
+        tags = [t.text for t in tags]
 
-        author = content.find_element(
-            By.CSS_SELECTOR,
-            "#watch7-content > span:nth-child(7) > link:nth-child(2)",
-        ).get_attribute("content")
-
+        content = self.find_element(By.ID, "watch7-content")
         channel = content.find_element(
             By.CSS_SELECTOR,
             "#watch7-content > span:nth-child(7) > link:nth-child(1)",
         ).get_attribute("href")
-
-        view_count = content.find_element(
-            By.CSS_SELECTOR,
-            "#watch7-content > meta:nth-child(17)",
-        ).get_attribute("content")
 
         upload_date = content.find_element(
             By.CSS_SELECTOR,
@@ -140,63 +135,36 @@ class Collector:
             "#watch7-content > meta:nth-child(20)",
         ).get_attribute("content")
 
-        self.browser.execute_script("window.scrollTo(0,0)")
-        # self.browser.save_screenshot("screenshot_description.png")
-        description = self.browser.find_element(By.ID, "description-inner")
-        description.click()
-        description = description.find_element(
-            By.CSS_SELECTOR,
-            "#description-inline-expander > yt-attributed-string",
-        ).text
-
-        play_time = self.get_play_time(
-            self.browser,
-            By.CSS_SELECTOR,
-            "#movie_player > div.ytp-chrome-bottom > div.ytp-chrome-controls > div.ytp-left-controls > div.ytp-time-display.notranslate > span:nth-child(2) > span.ytp-time-duration",
-            By.CSS_SELECTOR,
-            "#movie_player > div.ytp-chrome-bottom > div.ytp-chrome-controls > div.ytp-left-controls > div.ytp-time-display.notranslate.ytp-live > button",
-        )
-
-        like = self.browser.find_element(
-            By.CSS_SELECTOR,
-            "#segmented-like-button > ytd-toggle-button-renderer > yt-button-shape > button",
-        ).get_attribute("aria-label")
-
-        tags = self.browser.find_elements(By.CSS_SELECTOR, "#info > a")
-        tags = [t.text for t in tags]
-
-        next_video_url = self.browser.find_element(
+        next_video_url = self.find_element(
             By.CSS_SELECTOR,
             "#movie_player > div.ytp-chrome-bottom > div.ytp-chrome-controls > div.ytp-left-controls > a.ytp-next-button.ytp-button",
         ).get_attribute("href")
 
+        self.browser.execute_script("window.scrollTo(0,0)")
+
         detail = VideoDetail(
+            id,
             title,
             author,
-            channel,
-            int(view_count) if view_count else 0,
             url,
-            self.get_like_count(like) if like else 0,
-            description,
-            tags,
-            datetime.fromisoformat(upload_date) if upload_date else None,
             play_time,
-            category,
-            video_id,
-            next_video_url,
+            view_count,
+            description,
+            channel if channel else "",
+            self.get_like_count(like) if like else 0,
+            tags,
+            datetime.fromisoformat(upload_date) if upload_date else datetime.now(),
+            category if category else "",
+            next_video_url if next_video_url else "",
         )
-        for attr in detail.__struct_fields__:
-            if not getattr(detail, attr):
-                logger.warn("attribution not found")
-                logger.warn(msgspec.json.encode(detail))
-                break
         return detail
 
+    @check_parsing_error
     def get_video_simple(
         self,
         v: WebElement,
         screen: Screen,
-    ) -> VideoSimple | None:
+    ) -> VideoSimple | bool | None:
         url = ""
         if screen == Screen.MAIN:
             elem = v.find_element(By.ID, "video-title-link")
@@ -208,14 +176,6 @@ class Collector:
                 "avatar-link",
             ).get_attribute("title")
 
-            play_time = self.get_play_time(
-                v,
-                By.ID,
-                "time-status",
-                By.CSS_SELECTOR,
-                "#meta > ytd-badge-supported-renderer.video-badge.style-scope.ytd-rich-grid-media > div > p",
-            )
-
         elif screen == Screen.SEARCH:
             elem = v.find_element(By.ID, "video-title")
 
@@ -226,14 +186,6 @@ class Collector:
                 .find_element(By.ID, "channel-name")
                 .find_element(By.CSS_SELECTOR, "#text > a")
                 .get_attribute("textContent")
-            )
-
-            play_time = self.get_play_time(
-                v,
-                By.ID,
-                "time-status",
-                By.CSS_SELECTOR,
-                "#badges > div.badge.badge-style-type-live-now-alternate.style-scope.ytd-badge-supported-renderer.style-scope.ytd-badge-supported-renderer > p",
             )
 
         elif screen == Screen.PLAYER:
@@ -250,60 +202,125 @@ class Collector:
                 .get_attribute("textContent")
             )
 
-            play_time = self.get_play_time(
-                v,
-                By.ID,
-                "time-status",
-                By.CSS_SELECTOR,
-                "#dismissible > div > div.metadata.style-scope.ytd-compact-video-renderer > a > div > ytd-badge-supported-renderer > div > p",
-            )
-
         elif screen == Screen.CHANNEL:
             elem = v.find_element(By.ID, "video-title")
 
             url = elem.get_attribute("href")
 
-            author = None
-
-            play_time = self.get_play_time(
-                v,
-                By.ID,
-                "time-status",
-                By.CSS_SELECTOR,
-                "#badges > div.badge.badge-style-type-live-now-alternate.style-scope.ytd-badge-supported-renderer.style-scope.ytd-badge-supported-renderer > p",
-            )
+            author = ""
 
         else:
             return None
 
         # shorts는 수집제외
-        if str(urlparse(url).path).startswith("/shorts"):
+        if url and get_video_path(url).startswith("/shorts"):
             return None
 
-        aria = elem.get_attribute("aria-label")
-        title = elem.get_attribute("title")
+        try:
+            play_time = v.find_element(By.ID, "time-status").text
+        except Exception:
+            return None
+        play_time = play_time if ":" in play_time else "live"
 
-        if not author:
-            words = aria.removeprefix(f"{title} 게시자:").split()
-            while words.pop() != "조회수":
+        aria = elem.get_attribute("aria-label")
+        aria = unicodedata.normalize("NFC", aria if aria else "").strip()
+        title = elem.get_attribute("title")
+        title = unicodedata.normalize("NFC", title if title else "").strip()
+
+        author = author.strip() if author else ""
+        if not author and aria:
+            words = (
+                aria.lstrip()
+                .removeprefix(title)
+                .lstrip()
+                .removeprefix("게시자:")
+                .strip()
+                .split()
+            )
+            if "조회수" not in words:
+                return None
+            while words and words.pop() != "조회수":
                 continue
             author = " ".join(words)
+        author = unicodedata.normalize("NFC", author).strip()
 
         view_count = self.get_view_count(aria, title, author)
-        id = str(urlparse(url).query)[2:]
-
-        simple = VideoSimple(id, title, author, url, play_time, view_count)
-        for attr in simple.__struct_fields__:
-            if not getattr(simple, attr):
-                logger.warn("attribution not found")
-                logger.warn(msgspec.json.encode(simple))
-                break
+        id = get_video_id(url if url else "")
+        simple = VideoSimple(
+            id,
+            title,
+            author,
+            url if url else "",
+            play_time,
+            view_count,
+        )
         return simple
 
-    def get_view_count(self, aria: str, title: str, author: str) -> int:
-        prefix = f"{title} 게시자: {author} 조회수 "
+    def collect_ad(self):
+        try:
+            headline = self.find_element(
+                By.CLASS_NAME,
+                "ytp-flyout-cta-headline",
+                5,
+            ).text
 
-        view_count = aria.removeprefix(prefix)
+            if not headline:
+                return None
+
+            description = self.find_element(
+                By.CLASS_NAME,
+                "ytp-flyout-cta-description",
+            ).text
+
+            icon = self.find_element(
+                By.CLASS_NAME,
+                "ytp-flyout-cta-icon",
+            ).get_attribute("src")
+
+            preview = self.find_element(
+                By.CLASS_NAME,
+                "ytp-ad-preview-container",
+            ).text
+
+            # skip 가능
+            if preview.isnumeric():
+                skip = WebDriverWait(self.browser, 10).until(
+                    EC.element_to_be_clickable(
+                        (By.CLASS_NAME, "ytp-ad-skip-button-modern")
+                    )
+                )
+                sleep(random() * 2)
+                skip.click()
+            else:
+                WebDriverWait(self.browser, 60).until(
+                    EC.invisibility_of_element_located(
+                        (By.CLASS_NAME, "ytp-ad-preview-container")
+                    )
+                )
+            ad = VideoAd(
+                headline,
+                description,
+                icon if icon else "",
+            )
+            if self.last_ad == ad:
+                return None
+            self.last_ad = ad
+            return ad
+        except Exception:
+            return None
+
+    def get_view_count(self, aria: str, title: str, author: str) -> int:
+        view_count = (
+            aria.removeprefix(title)
+            .lstrip()
+            .removeprefix("게시자:")
+            .lstrip()
+            .removeprefix(author)
+            .lstrip()
+            .removeprefix("조회수")
+            .lstrip()
+        )
+
         view_count_end = view_count.find("회")
         if "없음" in view_count:
             view_count = 0
@@ -313,34 +330,22 @@ class Collector:
         return view_count
 
     def get_like_count(self, like: str) -> int:
+        like = unicodedata.normalize("NFC", like)
         return int(
-            like.removeprefix("나 외에 사용자 ")
+            like.removeprefix("나 외에 사용자")
             .removesuffix("명이 이 동영상을 좋아함")
+            .strip()
             .replace(",", "")
         )
 
-    def get_play_time(
-        self,
-        v: WebElement | WebDriver,
-        time_by: str,
-        time_selector: str,
-        live_by: str,
-        live_selector: str,
-    ) -> str:
-        try:
-            play_time = v.find_element(time_by, time_selector).text
-        except NoSuchElementException as e:
-            try:
-                if (
-                    text := v.find_element(
-                        live_by,
-                        live_selector,
-                    ).text
-                ) == "실시간":
-                    play_time = "live"
-                else:
-                    logger.fatal(f"play_time: {text}")
-                    raise e
-            except NoSuchElementException as e:
-                raise e
-        return play_time
+    def find_element(self, by: str, value: str, timeout=30) -> WebElement:
+        element = WebDriverWait(self.browser, timeout).until(
+            EC.presence_of_element_located((by, value))
+        )
+        return element
+
+    def find_elements(self, by: str, value: str, timeout=30) -> list[WebElement]:
+        elements = WebDriverWait(self.browser, timeout).until(
+            EC.presence_of_all_elements_located((by, value))
+        )
+        return elements

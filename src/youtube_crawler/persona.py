@@ -1,15 +1,16 @@
+from datetime import datetime
 from random import choice, random
 from time import sleep
 
-from msgspec import msgpack
-from selenium.webdriver import Firefox, Chrome
+from selenium.webdriver import Chrome, Firefox
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.common.by import By
 
-from youtube_crawler.models import VideoSimple, VideoDetail
 from youtube_crawler.collector import Collector
-from youtube_crawler.logger import logger, call_logger
+from youtube_crawler.logger import call_logger, logger
+from youtube_crawler.sender import Sender
+from youtube_crawler.utils import cvt_play_time
 
 
 class Persona:
@@ -19,35 +20,45 @@ class Persona:
         keywords: list[str],
         browser: Firefox | Chrome,
         watch_count=10,
-        speed=1,
+        nums_per_page=20,
+        debug=False,
     ):
         self.name = name
         self.keywords = keywords
         self.watch_count = watch_count
-        self.speed = speed
+        self.nums_per_page = nums_per_page
         self.browser = browser
         self.browser.set_window_size(1920, 3000)
-        self.collector = Collector(self.browser)
+        self.collector = Collector(self.browser, nums_per_page)
+        self.sender = Sender(self.name)
+        self.debug = debug
 
         self.last_video = None
         self.related = True
         self.video_list = []
-        self.next_urls = []
+
+        self.browser.get("http://icanhazip.com")
+        ip = self.browser.find_element(
+            By.CSS_SELECTOR,
+            "body > pre:nth-child(1)",
+        ).get_attribute("innerHTML")
+        logger.notice(f"ip: {ip}")
 
         self.browser.get("https://www.youtube.com/?gl=KR")
 
     @call_logger
     def run(self) -> None:
         # 시작 대기 시간
-        sleep(random() * 10 / self.speed)
+        sleep(random() * 10)
 
         # 한국어 영상 수집을 위해 한국어 키워드 입력
         self.move_to_search()
 
         # 영상 10개 볼때까지 반복
         while self.watch_count:
+            logger.notice(f"video #{11 - self.watch_count}")
             # 영상 고르는 시간
-            sleep(random() * 10 / self.speed)
+            sleep(random() * 10)
 
             # 영상 시청
             self.watch_video()
@@ -59,7 +70,6 @@ class Persona:
                     (self.move_to_search, True),
                     (self.move_to_main, False),
                     (self.move_to_channel, True),
-                    (self.watch_next_video, True),
                     (self.watch_recommendation, True),
                 ]
             )
@@ -75,10 +85,10 @@ class Persona:
 
         # 검색 화면에서 데이터 수집
         self.video_list = self.collector.collect_list_search()
-        self.next_urls = [video.url for video in self.video_list]
 
         # 수집된 데이터 전송
-        # TODO
+        self.sender.send_many("video_simple", self.video_list)
+        logger.notice(f"moved to search, collected {len(self.video_list)} videos")
 
     def move_to_main(self) -> None:
         self.browser.get("https://www.youtube.com/?gl=KR")
@@ -88,12 +98,14 @@ class Persona:
 
         # 메인 화면에서 데이터 수집
         self.video_list = self.collector.collect_list_main()
-        self.next_urls = [video.url for video in self.video_list]
 
         # 수집된 데이터 전송
-        # TODO
+        self.sender.send_many("video_simple", self.video_list)
+        logger.notice(f"moved to main, collected {len(self.video_list)} videos")
 
     def move_to_channel(self) -> None:
+        if not self.last_video:
+            return self.move_to_search()
         self.browser.get(self.last_video.channel)
 
         # 영상이 로드될때까지 대기
@@ -101,68 +113,68 @@ class Persona:
 
         # 채널 화면에서 데이터 수집
         self.video_list = self.collector.collect_list_channel()
-        self.next_urls = [video.url for video in self.video_list]
 
         # 수집된 데이터 전송
-        # TODO
-
-    def watch_next_video(self):
-        self.next_urls = [self.last_video.next_video_url]
+        self.sender.send_many("video_simple", self.video_list)
+        logger.notice(f"moved to channel, collected {len(self.video_list)} videos")
 
     def watch_recommendation(self) -> None:
-        self.next_urls = [video.url for video in self.video_list]
+        logger.notice("watch watch_recommendation")
 
-    def watch_video(self):
-        self.browser.get(choice(self.next_urls))
+    def watch_video(self) -> None:
+        logger.notice("watching video")
+        video = choice(self.video_list)
+        self.browser.get(video.url)
 
         # 추천 영상이 로드될때까지 대기
         self.wait_loading()
+        self.browser.execute_script("window.scrollTo(0, 0)")
 
         # 광고 영상 존재시 광고 수집
-        # TODO
+        ads = []
+        ad = self.collector.collect_ad()
+        if ad:
+            ads.append(ad)
 
-        # 데이터 수집
-        self.last_video, self.video_list = self.collector.collect_player_page()
+        # 영상 시청 화면에서 데이터 수집
+        self.video_list = self.collector.collect_list_player()
+        self.last_video = self.collector.get_video_detail(video)
 
         # 수집된 데이터 전송
-        # TODO
+        self.sender.send_many("video_simple", self.video_list)
+        logger.notice(f"watching video, collected {len(self.video_list)} videos")
 
         # 영상시청
-        play_time = self.cvt_play_time(self.last_video.play_time)
+        play_time = cvt_play_time(self.last_video.play_time)
         watching_time = (1 + random() * 9) * 60
         watching_time *= 2 if self.related else 0.8
-        watching_time = min(watching_time, play_time) + 30
-        sleep(watching_time / self.speed)
-
-    def wait_loading(self, num_components=20, seconds=30) -> None:
-        y = 0
-        while not (
-            WebDriverWait(self.browser, seconds).until(
-                EC.presence_of_all_elements_located((By.ID, "time-status"))
-            )
-        )[:num_components][-1].text:
-            if y < 2000:
-                y += 500
-            self.browser.execute_script(f"window.scrollTo(0,{y})")
+        watching_time = min(watching_time, play_time) + 10
+        if self.debug:
+            watching_time = 60
+        start = datetime.now()
+        while (datetime.now() - start).total_seconds() < watching_time:
+            # 광고 영상 존재시 광고 수집
+            ad = self.collector.collect_ad()
+            if ad:
+                ads.append(ad)
             sleep(1)
 
-    @staticmethod
-    def cvt_play_time(play_time: str) -> int:
-        if play_time == "live":
-            return int(random() * 10 * 60)
-        _play_time = play_time.split(":")
-        match len(_play_time):
-            case 1:
-                seconds = int(_play_time[0])
-            case 2:
-                seconds = int(_play_time[0]) * 60 + int(_play_time[1])
-            case 3:
-                seconds = (
-                    int(_play_time[0]) * 3600
-                    + int(_play_time[1]) * 60
-                    + int(_play_time[2])
-                )
-            case _:
-                logger.warn(f"{play_time} not matched")
-                return 0
-        return seconds
+        # 시청 완료 후 시청한 영상정보 전송
+        self.last_video.ads = ads
+        self.sender.send_one("video_detail", self.last_video)
+
+    def wait_loading(self, seconds=60) -> None:
+        y = 0
+        now = datetime.now()
+        while True:
+            if (datetime.now() - now).seconds > seconds:
+                break
+            elements = WebDriverWait(self.browser, seconds).until(
+                EC.presence_of_all_elements_located((By.ID, "time-status"))
+            )
+            loaded = len([elem for elem in elements if elem.text])
+            if self.nums_per_page < loaded:
+                break
+            y += 500
+            self.browser.execute_script(f"window.scrollTo(0,{y})")
+            sleep(random())

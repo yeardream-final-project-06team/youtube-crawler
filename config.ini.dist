@@ -1,0 +1,16 @@
+[DEFAULT]
+mode = prod
+
+[ELASTICSEARCH]
+host = 
+port = 
+
+[LOGSTASH]
+host = 
+port = 
+
+[KEYWORD]
+host = 
+
+[DISCORD]
+webhook = 
