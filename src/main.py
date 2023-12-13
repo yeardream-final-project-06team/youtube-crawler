@@ -1,5 +1,6 @@
 import os
 import random
+import subprocess
 
 import requests
 from selenium.webdriver import Chrome, Firefox, FirefoxOptions, FirefoxProfile
@@ -27,6 +28,7 @@ if __name__ == "__main__":
         profile.set_preference("permissions.default.image", 2)
         profile.set_preference("intl.accept_languages", "ko-kr,en-us,en")
         if TOR:
+            subprocess.check_output(["service", "tor", "start"])
             profile.set_preference("network.proxy.type", 1)
             profile.set_preference("network.proxy.socks", "127.0.0.1")
             profile.set_preference("network.proxy.socks_port", 9050)
