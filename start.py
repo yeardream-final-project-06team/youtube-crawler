@@ -1,5 +1,6 @@
 import socket
 import subprocess
+import time
 
 # reset
 subprocess.check_output(["python", "stop.py"], stderr=subprocess.DEVNULL)
@@ -34,3 +35,15 @@ with open("./worker", "r") as f:
             stdout=subprocess.DEVNULL,
         )
         print(f"worker {worker.strip()} connected")
+
+# rm finished container
+while True:
+    time.sleep(60 * 10)
+    subprocess.Popen(["docker", "container", "prune"], stdout=subprocess.DEVNULL)
+    with open("./worker", "r") as f:
+        for worker in f.readlines():
+            subprocess.Popen(
+                ["ssh", worker.strip(), "/usr/local/bin/docker", "container", "prune"],
+                stdout=subprocess.DEVNULL,
+            )
+    print("finished container removed")
