@@ -30,6 +30,7 @@ cmd = []
 args = [
     "docker service create",
     f"--replicas {replica}",
+    "--no-resolve-image",
     "--name crawler",
     f"-e MODE={MODE}",
     f"-e ELASTICSEARCH_HOST={ELASTICSEARCH_HOST}",
