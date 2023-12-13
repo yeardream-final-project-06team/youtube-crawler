@@ -17,6 +17,7 @@ keyword = properties["KEYWORD"]
 discord = properties["DISCORD"]
 
 MODE = default["mode"]
+TOR = default["tor"]
 ELASTICSEARCH_HOST = elasticsearch["host"]
 ELASTICSEARCH_PORT = elasticsearch["port"]
 LOGSTASH_HOST = logstash["host"]
@@ -33,6 +34,7 @@ args = [
     "--no-resolve-image",
     "--name crawler",
     f"-e MODE={MODE}",
+    f"-e TOR={TOR}",
     f"-e ELASTICSEARCH_HOST={ELASTICSEARCH_HOST}",
     f"-e ELASTICSEARCH_PORT={ELASTICSEARCH_PORT}",
     f"-e KEYWORD_SERVER={KEYWORD_SERVER}",

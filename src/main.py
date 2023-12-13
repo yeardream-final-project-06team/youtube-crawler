@@ -8,6 +8,7 @@ from selenium.webdriver.chrome.service import Service
 from youtube_crawler.persona import Persona
 
 MODE = os.getenv("MODE", "dev")
+TOR = bool(os.getenv("TOR", ""))
 KEYWORD_SERVER = os.getenv("KEYWORD_SERVER")
 
 user_agents = [
@@ -25,9 +26,10 @@ if __name__ == "__main__":
         profile = FirefoxProfile()
         profile.set_preference("permissions.default.image", 2)
         profile.set_preference("intl.accept_languages", "ko-kr,en-us,en")
-        profile.set_preference("network.proxy.type", 1)
-        profile.set_preference("network.proxy.socks", "127.0.0.1")
-        profile.set_preference("network.proxy.socks_port", 9050)
+        if TOR:
+            profile.set_preference("network.proxy.type", 1)
+            profile.set_preference("network.proxy.socks", "127.0.0.1")
+            profile.set_preference("network.proxy.socks_port", 9050)
         profile.set_preference("general.useragent.override", user_agent)
 
         options = FirefoxOptions()

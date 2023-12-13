@@ -43,7 +43,14 @@ while True:
     with open("./worker", "r") as f:
         for worker in f.readlines():
             subprocess.Popen(
-                ["ssh", worker.strip(), "/usr/local/bin/docker", "container", "prune"],
+                [
+                    "ssh",
+                    worker.strip(),
+                    "/usr/local/bin/docker",
+                    "container",
+                    "prune",
+                    "-f",
+                ],
                 stdout=subprocess.DEVNULL,
             )
     print("finished container removed")
